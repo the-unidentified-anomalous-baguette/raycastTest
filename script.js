@@ -1,16 +1,20 @@
 let map = [
-  [1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 1],
-  [1, 0, 1, 0, 0, 1],
-  [1, 0, 0, 0, 1, 1],
-  [1, 0, 0, 0, 1, 1],
-  [1, 1, 1, 1, 1, 1]]
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
 
 let pX = 80
 let pY = 80
-let pRadius = 10
-let pSpeed = 20
-let mapSize = 64
+let pRadius = 15
+let pSpeed = 5
+let mapSize = 16
 let pDir = 0
 
 function setup(){
@@ -23,6 +27,8 @@ function setup(){
 
 function draw(){
   background(100)
+  noStroke()
+  fill((255, 255, 255))
   for (let i = 0; i < map.length; i++){
     for (let j = 0; j < map[i].length; j++){
       if (map[i][j] == 1){
@@ -30,6 +36,7 @@ function draw(){
       }
     }
   }
+  stroke(0)
   if (keyIsDown(37)){
     pDir -= 3
   }
@@ -92,6 +99,7 @@ function draw(){
       pY += pSpeed*sin(pDir)
     }
   }
+  fill((120, 50, 50))
   rect(pX, pY, pRadius * 2, pRadius * 2)
   line(pX, pY, pX + 40 *sin(pDir), pY - 40 * cos(pDir))
 }
