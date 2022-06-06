@@ -118,7 +118,7 @@ function sortFunction(a, b) {
 
 function renderCalc(){
   seenWalls = []
-  for (let i = player.angle - 45; i <= player.angle + 45; i++){
+  for (let i = player.angle - 45; i <= player.angle + 45; i+=.5){
     for (let j = 0; j < walls.length; j++){
       rayReturn = new ray(i).cast(walls[j])
       if (rayReturn <= 1){
@@ -174,10 +174,16 @@ function draw(){
     renderCalc()
   }
   if (keyIsDown(40)){
-    horizon -= player.speed
+    horizon -= player.speed * 10
+    if (horizon < 0){
+      horizon = 0
+    }
   }
   if (keyIsDown(38)){
-    horizon += player.speed
+    horizon += player.speed * 10
+    if (horizon > 576){
+      horizon = 576
+    }
   }
   // if (keyIsDown(16)){
   //   horizon = 188
@@ -247,11 +253,13 @@ function draw(){
   noStroke()
   for (let i = 0; i < seenWalls.length; i++){
     fill(seenWalls[i][2].colour[0], seenWalls[i][2].colour[1], seenWalls[i][2].colour[2])
-    rect(1024 * (45+seenWalls[i][1] - player.angle)/90, horizon - seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.9))/2 , 
-    12, seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.5)))
-    fill(0, 0, 0, 256 * seenWalls[i][0] * seenWalls[i][0] * 8)
-    rect(1024 * (45+seenWalls[i][1] - player.angle)/90, horizon - seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.9))/2 , 
-    12, seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.5)))
+    rect(1024 * (45+seenWalls[i][1] - player.angle)/90, 
+    horizon - seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.9))/2 , 
+    //Math.log(2 - seenWalls[i][0]),
+    6.5, 
+    //(Math.pow(Math.log(seenWalls[i][0]+1), 0.5) + Math.log(seenWalls[i][0])) * seenWalls[i][2].height)
+    seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.5)))
+    //fill(0, 0, 0, 256 * seenWalls[i][0] * seenWalls[i][0] * 8)
     // fill(2048 / (255 * seenWalls[i][0] * seenWalls[i][0]), 0, 0, (256 / (255 * seenWalls[i][0] * seenWalls[i][0]))/256 - 50)
     // rect(1024 * (45+seenWalls[i][1] - player.angle)/90, horizon - 144 * (1-Math.pow(seenWalls[i][0], -0.5)), 
     // 12, 288 * (1-Math.pow(seenWalls[i][0], -0.5)))
@@ -263,5 +271,5 @@ function draw(){
   noStroke()
   fill(0)
   circle(player.x, player.y, 10)
-  text(Math.floor(frameRate()), 10, 20);
+  text(Math.ceil(frameRate()), 10, 20);
 }
