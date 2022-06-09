@@ -103,26 +103,33 @@ class pc{
 let walls
 let player
 let seenWalls = []
-let rayReturn
 let renderDist = 288
 let horizon = 288
 
 function sortFunction(a, b) {
-    if (a[0] === b[0]) {
+    if (a[3] === b[3]) {
         return 0;
     }
     else {
-        return (a[0] > b[0]) ? -1 : 1;
+        return (a[3] > b[3]) ? -1 : 1;
     }
 }
 
 function renderCalc(){
+  let rayReturn
+  let rendIst
   seenWalls = []
   for (let i = player.angle - 45; i <= player.angle + 45; i+=.5){
     for (let j = 0; j < walls.length; j++){
       rayReturn = new ray(i).cast(walls[j])
       if (rayReturn <= 1){
-        seenWalls.push([rayReturn, i, walls[j]])
+        if (i <=45 || i >= 315 || (i > 135 && i < 225)){
+          rendIst = Math.abs(rayReturn * cos(i))
+        }
+        else {
+          rendIst = Math.abs(rayReturn * sin(i))
+        }
+        seenWalls.push([rayReturn, i, walls[j], rendIst])
         // for (let k = 0; k < seenWalls.length - 1; k++){
         //   if (seenWalls[k][1] == seenWalls[seenWalls.length - 1][1]){
         //     if (seenWalls[k][0] < seenWalls[seenWalls.length - 1][0]){
@@ -148,11 +155,11 @@ function setup(){
   canvas.parent('container')
   stroke(255)
   fill(25)
-  walls = [new boundary(3, 5, 57, 8, stone, 50), new boundary(57, 8, 67, 29, stone, 50), new boundary(67, 29, 101, 34, red, 50), 
+  walls = [new boundary(3, 5, 57, 8, stone, 200), new boundary(57, 8, 67, 29, stone, 200), new boundary(67, 29, 101, 34, red, 100), 
            new boundary(101, 34, 116, 22, stone, 50), new boundary(116, 22, 145, 24, stone, 50), new boundary(145, 24, 181, 59, stone, 50),
            new boundary(151, 50, 140, 71, stone, 50), new boundary(112, 70, 100, 39, stone, 50), new boundary(151, 50, 164, 77, stone, 50),
-           new boundary(100, 39, 66, 39, red, 50), new boundary(66, 39, 49, 69, stone, 50), new boundary(49, 69, 3, 57, stone, 50), 
-           new boundary(3, 57, 3, 5, stone, 50), new boundary(140, 71, 140, 83, stone, 50), new boundary(140, 83, 158, 101, stone, 50), 
+           new boundary(100, 39, 66, 39, red, 100), new boundary(66, 39, 49, 69, stone, 200), new boundary(49, 69, 3, 57, stone, 200), 
+           new boundary(3, 57, 3, 5, stone, 200), new boundary(140, 71, 140, 83, stone, 50), new boundary(140, 83, 158, 101, stone, 50), 
            new boundary(158, 101, 164, 93, stone, 50), new boundary(164, 93, 156, 85, stone, 50), new boundary(156, 85, 164, 77, stone, 50), 
            new boundary(195, 95, 195, 123, stone, 50), new boundary(195, 123, 156, 133, stone, 50), new boundary(181, 59, 195, 95, red, 50),
            new boundary(156, 133, 149, 107, stone, 50), new boundary(149, 107, 112, 70, stone, 50)]
@@ -167,22 +174,31 @@ function draw(){
   
   if (keyIsDown(37)){
     player.angle -= player.speed
+    if (player.angle < 0){
+      player.angle += 360
+    }
     renderCalc()
   }
   if (keyIsDown(39)){
     player.angle += player.speed
+    if (player.angle > 360){
+      player.angle -= 360
+    }
     renderCalc()
   }
+  console.log(player.angle)
   if (keyIsDown(40)){
     horizon -= player.speed * 10
-    if (horizon < 0){
-      horizon = 0
+    renderDist += 2
+    if (horizon < -576){
+      horizon = -576
     }
   }
   if (keyIsDown(38)){
     horizon += player.speed * 10
-    if (horizon > 576){
-      horizon = 576
+    renderDist -= 2
+    if (horizon > 1152){
+      horizon = 1152
     }
   }
   // if (keyIsDown(16)){
@@ -254,15 +270,14 @@ function draw(){
   for (let i = 0; i < seenWalls.length; i++){
     fill(seenWalls[i][2].colour[0], seenWalls[i][2].colour[1], seenWalls[i][2].colour[2])
     rect(1024 * (45+seenWalls[i][1] - player.angle)/90, 
-    horizon - seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.9))/2 , 
-    //Math.log(2 - seenWalls[i][0]),
+    576 - (seenWalls[i][3] * (576-horizon)) - seenWalls[i][2].height * (1-seenWalls[i][3]),
     6.5, 
-    //(Math.pow(Math.log(seenWalls[i][0]+1), 0.5) + Math.log(seenWalls[i][0])) * seenWalls[i][2].height)
-    seenWalls[i][2].height * (1-Math.pow(seenWalls[i][0], -0.5)))
-    //fill(0, 0, 0, 256 * seenWalls[i][0] * seenWalls[i][0] * 8)
-    // fill(2048 / (255 * seenWalls[i][0] * seenWalls[i][0]), 0, 0, (256 / (255 * seenWalls[i][0] * seenWalls[i][0]))/256 - 50)
-    // rect(1024 * (45+seenWalls[i][1] - player.angle)/90, horizon - 144 * (1-Math.pow(seenWalls[i][0], -0.5)), 
-    // 12, 288 * (1-Math.pow(seenWalls[i][0], -0.5)))
+    seenWalls[i][2].height * (1-seenWalls[i][3]))
+    fill(0, 0, 0, 256 * seenWalls[i][0] * seenWalls[i][0] * 8)
+    rect(1024 * (45+seenWalls[i][1] - player.angle)/90, 
+    576 - (seenWalls[i][3] * (576-horizon)) - seenWalls[i][2].height * (1-seenWalls[i][3]),
+    6.5, 
+    seenWalls[i][2].height * (1-seenWalls[i][3]))
   }strokeWeight(1)
   for (let i = 0; i < walls.length; i++){
     stroke((0, 255, 0))
