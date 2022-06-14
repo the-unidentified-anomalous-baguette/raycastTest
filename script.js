@@ -81,10 +81,11 @@ class ray{
 }
 
 class pc{
-  constructor(x, y, z, angle, speed, height){
+  constructor(x, y, z, angley, anglex, speed, height){
     this.x = x
     this.y = y
-    this.angle = angle
+    this.angley = angley
+    this.anglex = anglex
     this.speed = speed
     this.z = z
     this.height = height
@@ -107,39 +108,44 @@ let renderDist = 288
 let horizon = 288
 
 function sortFunction(a, b) {
-    if (a[3] === b[3]) {
+    if (a[0] === b[0]) {
         return 0;
     }
     else {
-        return (a[3] > b[3]) ? -1 : 1;
+        return (a[0] > b[0]) ? -1 : 1;
     }
 }
 
 function renderCalc(){
   let rayReturn
   let rendIst
+  let rayAng
+  let opp = 0
   seenWalls = []
-  for (let i = player.angle - 45; i <= player.angle + 45; i+=.5){
+  for (let i = 0; i <= 45; i = atan(opp + 1/90)){
+    opp = tan(i)
     for (let j = 0; j < walls.length; j++){
-      rayReturn = new ray(i).cast(walls[j])
+      rayAng = player.angley + i
+      rayReturn = new ray(rayAng).cast(walls[j])
       if (rayReturn <= 1){
-        if (i <=45 || i >= 315 || (i > 135 && i < 225)){
-          rendIst = Math.abs(rayReturn * cos(i))
+        if (rayAng <=45 || rayAng >= 315 || (rayAng > 135 && rayAng < 225)){
+          rendIst = Math.abs(rayReturn * sin(rayAng))
         }
         else {
-          rendIst = Math.abs(rayReturn * sin(i))
+          rendIst = Math.abs(rayReturn * sin(rayAng))
         }
-        seenWalls.push([rayReturn, i, walls[j], rendIst])
-        // for (let k = 0; k < seenWalls.length - 1; k++){
-        //   if (seenWalls[k][1] == seenWalls[seenWalls.length - 1][1]){
-        //     if (seenWalls[k][0] < seenWalls[seenWalls.length - 1][0]){
-        //       seenWalls.pop()
-        //     }
-        //     else {
-        //       seenWalls.splice(k, 1)
-        //     }
-        //   }
-        // }
+        seenWalls.push([rayReturn, rayAng, walls[j], rendIst])
+      }
+      rayAng = player.angley - i
+      rayReturn = new ray(rayAng).cast(walls[j])
+      if (rayReturn <= 1){
+        if (rayAng <=45 || rayAng >= 315 || (rayAng > 135 && rayAng < 225)){
+          rendIst = Math.abs(rayReturn * sin(rayAng))
+        }
+        else {
+          rendIst = Math.abs(rayReturn * sin(rayAng))
+        }
+        seenWalls.push([rayReturn, rayAng, walls[j], rendIst])
       }
     }
   }
@@ -164,7 +170,7 @@ function setup(){
            new boundary(195, 95, 195, 123, stone, 50), new boundary(195, 123, 156, 133, stone, 50), new boundary(181, 59, 195, 95, red, 50),
            new boundary(156, 133, 149, 107, stone, 50), new boundary(149, 107, 112, 70, stone, 50)]
   frameRate(30)
-  player = new pc(10, 10, 0, 45, 2, 288)
+  player = new pc(10, 10, 0, 0, 45, 2, 288)
   renderCalc()
 }
 
@@ -173,32 +179,33 @@ function draw(){
   fill(100, 50, 0)
   
   if (keyIsDown(37)){
-    player.angle -= player.speed
-    if (player.angle < 0){
-      player.angle += 360
+    player.angley -= player.speed
+    if (player.angley < 0){
+      player.angley += 360
     }
     renderCalc()
   }
   if (keyIsDown(39)){
-    player.angle += player.speed
-    if (player.angle > 360){
-      player.angle -= 360
+    player.angley += player.speed
+    if (player.angley > 360){
+      player.angley -= 360
     }
     renderCalc()
   }
-  console.log(player.angle)
   if (keyIsDown(40)){
     horizon -= player.speed * 10
-    renderDist += 2
-    if (horizon < -576){
-      horizon = -576
+    player.anglex += 1
+    if (player.anglex > 75){
+      player.anglex -= 1
+      horizon += player.speed * 10
     }
   }
   if (keyIsDown(38)){
     horizon += player.speed * 10
-    renderDist -= 2
-    if (horizon > 1152){
-      horizon = 1152
+    player.anglex -= 1
+    if (player.anglex < -75){
+      horizon -= player.speed * 10
+      player.anglex += 1
     }
   }
   // if (keyIsDown(16)){
@@ -206,78 +213,81 @@ function draw(){
   // }
   //else {horizon = 288}
   rect(0, horizon, 1024, 576 - horizon)
-  for (let i = 0; i < 576 - horizon; i++){
-    fill(0, 0, 0, 255 - (255 * i/576))
-    rect(0, i + horizon, 1024, 1)
-  }
+  // for (let i = 0; i < 576 - horizon; i++){
+  //   fill(0, 0, 0, 255 - (255 * i/576))
+  //   rect(0, i + horizon, 1024, 1)
+  // }
   if (keyIsDown(87)){
     let canFw = false
     for (let i = 0; i < walls.length; i++){
-      canFw = new ray(player.angle).hitCheck(walls[i])
+      canFw = new ray(player.angley).hitCheck(walls[i])
       if (canFw == false){
         break
       }
     }
     if (canFw){
-      player.x += sin(player.angle)
-      player.y += -cos(player.angle)
+      player.x += sin(player.angley)
+      player.y += -cos(player.angley)
       renderCalc()
     }
   }
   if (keyIsDown(83)){
     let canBw = false
     for (let i = 0; i < walls.length; i++){
-      canBw = new ray(player.angle + 180).hitCheck(walls[i])
+      canBw = new ray(player.angley + 180).hitCheck(walls[i])
       if (canBw == false){
         break
       }
     }
     if (canBw){
-      player.x -= sin(player.angle)
-      player.y -= -cos(player.angle)
+      player.x -= sin(player.angley)
+      player.y -= -cos(player.angley)
       renderCalc()
     }
   }
   if (keyIsDown(65)){
     let canLw = false
     for (let i = 0; i < walls.length; i++){
-      canLw = new ray(player.angle - 90).hitCheck(walls[i])
+      canLw = new ray(player.angley - 90).hitCheck(walls[i])
       if (canLw == false){
         break
       }
     }
     if (canLw){
-      player.x += -cos(player.angle)
-      player.y -= sin(player.angle)
+      player.x += -cos(player.angley)
+      player.y -= sin(player.angley)
       renderCalc()
     }
   }
   if (keyIsDown(68)){
     let canRw = false
     for (let i = 0; i < walls.length; i++){
-      canRw = new ray(player.angle + 90).hitCheck(walls[i])
+      canRw = new ray(player.angley + 90).hitCheck(walls[i])
       if (canRw == false){
         break
       }
     }
     if (canRw){
-      player.x -= -cos(player.angle)
-      player.y += sin(player.angle)
+      player.x -= -cos(player.angley)
+      player.y += sin(player.angley)
       renderCalc()
     }
   }
   noStroke()
   for (let i = 0; i < seenWalls.length; i++){
     fill(seenWalls[i][2].colour[0], seenWalls[i][2].colour[1], seenWalls[i][2].colour[2])
-    rect(1024 * (45+seenWalls[i][1] - player.angle)/90, 
-    576 - (seenWalls[i][3] * (576-horizon)) - seenWalls[i][2].height * (1-seenWalls[i][3]),
-    6.5, 
-    seenWalls[i][2].height * (1-seenWalls[i][3]))
+    rect(
+      512 - (512 * (player.angley-seenWalls[i][1])/45),
+      576,
+      12, 
+      -seenWalls[i][2].height * (1-seenWalls[i][3]))
+      //seenWalls[i][2].height * (1-seenWalls[i][0]) * 1-(seenWalls[i][0]/cos(seenWalls[i][1] - player.angley)))
     fill(0, 0, 0, 256 * seenWalls[i][0] * seenWalls[i][0] * 8)
-    rect(1024 * (45+seenWalls[i][1] - player.angle)/90, 
-    576 - (seenWalls[i][3] * (576-horizon)) - seenWalls[i][2].height * (1-seenWalls[i][3]),
-    6.5, 
-    seenWalls[i][2].height * (1-seenWalls[i][3]))
+    rect(
+      512 - (512 * (player.angley-seenWalls[i][1])/45),
+      576,
+      12,
+      -seenWalls[i][2].height * (1-seenWalls[i][3]))
   }strokeWeight(1)
   for (let i = 0; i < walls.length; i++){
     stroke((0, 255, 0))
@@ -286,5 +296,5 @@ function draw(){
   noStroke()
   fill(0)
   circle(player.x, player.y, 10)
-  text(Math.ceil(frameRate()), 10, 20);
+  text(Math.floor(frameRate()), 10, 20);
 }
