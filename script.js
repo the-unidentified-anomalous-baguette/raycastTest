@@ -9,8 +9,8 @@ class boundary{
     this.adj = dist(x1, y1, x2, y1)
     this.cosAng = acos(this.adj/this.hyp)
     this.colour = colour
-    this.height = height
-    this.base = base
+    this.height = height * 288/175
+    this.base = base * 288/175
   }
 
   show(){
@@ -122,32 +122,18 @@ function renderCalc(){
   let rayAng
   let opp = 0
   seenWalls = []
-  for (let i = 0; i <= 45; i = atan(opp + 1/45)){
+  for (let i = 0; i <= 45; i = atan(opp + 1/90)){
     opp = tan(i)
     for (let j = 0; j < walls.length; j++){
       rayAng = player.angley + i
       rayReturn = new ray(rayAng).cast(walls[j])
       if (rayReturn <= 1){
-        rendIst = Math.abs(rayReturn * sin(rayAng) * cos(rayAng) + 1)/1.5
-        // if (rayAng <=45 || rayAng >= 315 || (rayAng > 135 && rayAng < 225)){
-        //   rendIst = rayReturn * sin(rayAng) * cos(rayAng)
-        // }
-        // else {
-        //   rendIst = Math.abs(rayReturn * cos(rayAng))
-        // }
-        seenWalls.push([rayReturn, rayAng, walls[j], rendIst])
+        seenWalls.push([rayReturn, rayAng, walls[j]])
       }
       rayAng = player.angley - i
       rayReturn = new ray(rayAng).cast(walls[j])
       if (rayReturn <= 1){
-        rendIst = Math.abs(rayReturn * sin(rayAng) * cos(rayAng) + 1)/1.5
-        // if (rayAng <=45 || rayAng >= 315 || (rayAng > 135 && rayAng < 225)){
-        //   rendIst = Math.abs(rayReturn * sin(rayAng))
-        // }
-        // else {
-        //   rendIst = Math.abs(rayReturn * cos(rayAng))
-        // }
-        seenWalls.push([rayReturn, rayAng, walls[j], rendIst])
+        seenWalls.push([rayReturn, rayAng, walls[j]])
       }
     }
   }
@@ -171,7 +157,7 @@ function setup(){
            new boundary(158, 101, 164, 93, stone, 50, 0), new boundary(164, 93, 156, 85, stone, 50, 0), new boundary(156, 85, 164, 77, stone, 50, 0), 
            new boundary(195, 95, 195, 123, stone, 50, 0), new boundary(195, 123, 156, 133, stone, 50, 0), new boundary(181, 59, 195, 95, red, 50, 0),
            new boundary(156, 133, 112, 70, stone, 50, 0)]
-  //frameRate(30)
+  frameRate(30)
   player = new pc(50, 35, 0, 90, 0, 2, 175)
   renderCalc()
 }
@@ -209,7 +195,6 @@ function draw(){
     }
     horizon = 288 + 288 * tan(player.anglex)
   }
-  player.eyeLevel = player.z + player.height
   rect(0, 288 + (576 * tan(player.anglex)), 1024, 576 - 288 * tan(player.anglex))
   if (keyIsDown(87)){
     let canFw = false
@@ -267,12 +252,6 @@ function draw(){
       renderCalc()
     }
   }
-  if (keyIsDown(16)){
-    player.height = 80
-  }
-  else {
-    player.height = 175
-  }
   if (keyIsDown(32)){
     jumping = true
   }
@@ -291,13 +270,15 @@ function draw(){
   player.eyeLevel = player.z + player.height
   noStroke()
   for (let i = 0; i < seenWalls.length; i++){
-    fill(seenWalls[i][2].colour[0] * (1 - seenWalls[i][0]), seenWalls[i][2].colour[1] * (1 - seenWalls[i][0]), seenWalls[i][2].colour[2] * (1 - seenWalls[i][0]))
+    fill(seenWalls[i][2].colour[0] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]),
+    seenWalls[i][2].colour[1] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]),
+    seenWalls[i][2].colour[2] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]))
     rect(
-      512 - (512 * (player.angley-seenWalls[i][1])/45) - 7.5,
+      512 - (512 * (player.angley-seenWalls[i][1])/45) - 4,
       horizon + (288 * (1-seenWalls[i][0])) + //flat distance
       (288 * tan(player.anglex) * seenWalls[i][0]) + //player rotation
       ((player.eyeLevel - seenWalls[i][2].base) * (1-seenWalls[i][0])), //vertical distance
-      15, 
+      8, 
       (-seenWalls[i][2].height * (1-seenWalls[i][0])) - Math.abs((1-seenWalls[i][0]) * tan(player.anglex))// + ((1-seenWalls[i][0]) * seenWalls[i][2].height * tan(player.anglex))
       )
   }
@@ -312,4 +293,15 @@ function draw(){
   fill(0)
   circle(player.x, player.y, 10)
   text(Math.floor(frameRate()), 10, 20);
+}
+
+function keyPressed() {
+  if (keyCode == SHIFT){
+    if (player.height == 80){
+      player.height = 175
+    }
+    else {
+      player.height = 80
+    }
+  }
 }
