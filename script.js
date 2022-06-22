@@ -9,8 +9,8 @@ class boundary{
     this.adj = dist(x1, y1, x2, y1)
     this.cosAng = acos(this.adj/this.hyp)
     this.colour = colour
-    this.height = height * 288/175
-    this.base = base * 288/175
+    this.height = height
+    this.base = base
   }
 
   show(){
@@ -33,7 +33,7 @@ class ray{
     pop()
   }
 
-  cast(wall){
+  cast(wall, i){
     let x1 = wall.a.x
     let x2 = wall.b.x
     let y1 = wall.a.y
@@ -51,9 +51,8 @@ class ray{
     let t = ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/den
     let u = ((x1-x3)*(y1-y2)-(y1-y3)*(x1-x2))/den
     if (t >= 0 && t <= 1 && u >= 0 && u <= 1){
-      pt.x = ((x1*y2 - y1*x2)*(x3 - x4) - (x1-x2)*(x3*y4 - y3*x4))/den
-      pt.y = ((x1*y2 - y1*x2)*(y3 - y4) - (y1-y2)*(x3*y4 - y3*x4))/den
-      //this.show(u)
+      // pt.x = ((x1*y2 - y1*x2)*(x3 - x4) - (x1-x2)*(x3*y4 - y3*x4))/den
+      // pt.y = ((x1*y2 - y1*x2)*(y3 - y4) - (y1-y2)*(x3*y4 - y3*x4))/den
       return u
     } else {return 2}
   }
@@ -126,12 +125,12 @@ function renderCalc(){
     opp = tan(i)
     for (let j = 0; j < walls.length; j++){
       rayAng = player.angley + i
-      rayReturn = new ray(rayAng).cast(walls[j])
+      rayReturn = new ray(rayAng).cast(walls[j], i)
       if (rayReturn <= 1){
         seenWalls.push([rayReturn, rayAng, walls[j]])
       }
       rayAng = player.angley - i
-      rayReturn = new ray(rayAng).cast(walls[j])
+      rayReturn = new ray(rayAng).cast(walls[j], i)
       if (rayReturn <= 1){
         seenWalls.push([rayReturn, rayAng, walls[j]])
       }
@@ -149,16 +148,17 @@ function setup(){
   canvas.parent('container')
   stroke(255)
   fill(25)
-  walls = [new boundary(3, 5, 57, 8, stone, 600, 0), new boundary(57, 8, 67, 29, stone, 200, 0), new boundary(67, 29, 101, 34, red, 100, 100), 
-           new boundary(101, 34, 116, 22, stone, 550, 0), new boundary(116, 22, 145, 24, stone, 50, 500), new boundary(145, 24, 181, 59, stone, 50, 0),
-           new boundary(112, 70, 100, 39, stone, 50, 0), new boundary(140, 71, 164, 77, stone, 50, 0),
-           new boundary(100, 39, 66, 39, red, 100, 200), new boundary(66, 39, 49, 69, stone, 200, 0), new boundary(49, 69, 3, 57, stone, 200, 0), 
-           new boundary(3, 57, 3, 5, stone, 200, 0), new boundary(140, 71, 140, 83, stone, 50, 0), new boundary(140, 83, 158, 101, stone, 50, 0), 
-           new boundary(158, 101, 164, 93, stone, 50, 0), new boundary(164, 93, 156, 85, stone, 50, 0), new boundary(156, 85, 164, 77, stone, 50, 0), 
-           new boundary(195, 95, 195, 123, stone, 50, 0), new boundary(195, 123, 156, 133, stone, 50, 0), new boundary(181, 59, 195, 95, red, 50, 0),
-           new boundary(156, 133, 112, 70, stone, 50, 0)]
+  // walls = [new boundary(3, 5, 57, 8, stone, 600, 0), new boundary(57, 8, 67, 29, stone, 200, 0), new boundary(67, 29, 101, 34, red, 100, 100), 
+  //          new boundary(101, 34, 116, 22, stone, 550, 0), new boundary(116, 22, 145, 24, stone, 50, 500), new boundary(145, 24, 181, 59, stone, 50, 0),
+  //          new boundary(112, 70, 100, 39, stone, 50, 0), new boundary(140, 71, 164, 77, stone, 50, 0),
+  //          new boundary(100, 39, 66, 39, red, 100, 200), new boundary(66, 39, 49, 69, stone, 200, 0), new boundary(49, 69, 3, 57, stone, 200, 0), 
+  //          new boundary(3, 57, 3, 5, stone, 200, 0), new boundary(140, 71, 140, 83, stone, 50, 0), new boundary(140, 83, 158, 101, stone, 50, 0), 
+  //          new boundary(158, 101, 164, 93, stone, 50, 0), new boundary(164, 93, 156, 85, stone, 50, 0), new boundary(156, 85, 164, 77, stone, 50, 0), 
+  //          new boundary(195, 95, 195, 123, stone, 50, 0), new boundary(195, 123, 156, 133, stone, 50, 0), new boundary(181, 59, 195, 95, red, 50, 0),
+  //          new boundary(156, 133, 112, 70, stone, 200, -300)]
+  walls = [new boundary(5, 5, 10, 5, stone, 50, 0), new boundary(5, 5, 5, 10, stone, 400, 0), new boundary(10, 5, 10, 10, stone, 400, 0), new boundary(5, 10, 10, 10, stone, 400, 0)]
   frameRate(30)
-  player = new pc(50, 35, 0, 90, 0, 2, 175)
+  player = new pc(7, 7, 0, 0, 0, 2, 175)
   renderCalc()
 }
 
@@ -267,7 +267,6 @@ function draw(){
       player.z = 0
     }
   }
-  player.eyeLevel = player.z + player.height
   noStroke()
   for (let i = 0; i < seenWalls.length; i++){
     fill(seenWalls[i][2].colour[0] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]),
@@ -297,11 +296,16 @@ function draw(){
 
 function keyPressed() {
   if (keyCode == SHIFT){
-    if (player.height == 80){
-      player.height = 175
-    }
-    else {
-      player.height = 80
-    }
+    player.height += 25
+    // if (player.height == 80){
+    //   player.height = 1
+    // }
+    // else {
+    //   player.height = 80
+    // }
   }
+  if (keyCode == CONTROL){
+    player.height -= 25
+  }
+  player.eyeLevel = player.z + player.height
 }
