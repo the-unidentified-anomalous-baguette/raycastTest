@@ -33,26 +33,27 @@ class ray{
     pop()
   }
 
-  cast(wall, i){
+  cast(wall){
+    // shortening variables
     let x1 = wall.a.x
     let x2 = wall.b.x
     let y1 = wall.a.y
     let y2 = wall.b.y
-
     let x3 = this.pos.x
     let x4 = x3 + (this.dir.x * renderDist)
     let y3 = this.pos.y
     let y4 = y3 + (this.dir.y * renderDist)
-
-    let pt = createVector()
-
+    // calculating if the ray intersects the wall
     let den = (x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)
-    if (den == 0){return 2}
+    if (den == 0){return 2}// if they are parallel
     let t = ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/den
     let u = ((x1-x3)*(y1-y2)-(y1-y3)*(x1-x2))/den
     if (t >= 0 && t <= 1 && u >= 0 && u <= 1){
-      return u
-    } else {return 2}
+      return u // if they intersect correctly
+    }
+    else {
+      return 2 // if they otherwise don't intersect
+    }
   }
 
   hitCheck(wall){
@@ -115,19 +116,21 @@ function sortFunction(a, b) {
 
 function renderCalc(){
   let rayReturn
-  let rendIst
   let rayAng
-  let opp = 0
   seenWalls = []
-  for (let i = 0; i <= 45; i = atan(opp + 1/90)){
-    opp = tan(i)
+  for (let i = 0; i <= 45; i = atan(tan(i) + 1/90)){
+    // iterates evenly across the screen
     for (let j = 0; j < walls.length; j++){
-      rayAng = player.angley + i
+      // runs checks for every wall
+      rayAng = player.angley + i // rays on screen right
       rayReturn = new ray(rayAng).cast(walls[j], i)
+      // executes cast
       if (rayReturn <= 1){
         seenWalls.push([rayReturn, rayAng, walls[j]])
+        // adds distance, horizontal position 
+        // and the checked wall to list
       }
-      rayAng = player.angley - i
+      rayAng = player.angley - i // rays on screen left
       rayReturn = new ray(rayAng).cast(walls[j], i)
       if (rayReturn <= 1){
         seenWalls.push([rayReturn, rayAng, walls[j]])
@@ -135,6 +138,7 @@ function renderCalc(){
     }
   }
   seenWalls.sort(sortFunction);
+  // organises returned data by distance
 }
 
 function setup(){

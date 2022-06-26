@@ -2,7 +2,7 @@ let red = [200,10, 10]
 let stone = [128, 120, 133]
 
 class pc{
-  constructor(x, y, z, height, angleLR, angleUD, speed){
+  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor){
     this.x = x
     this.y = y
     this.z = z
@@ -11,15 +11,18 @@ class pc{
     this.angleUD = angleUD
     this.speed = speed // cm/s
     this.eyeLevel = y + height
+    this.currentFloor = currentFloor
   }
 
   floorCheck(){
     for (let i of floors){
-      if (player.y > i.y - i.catchZone){
-        let rottedX = player.x * cos(i.rotation) - player.y * sin(i.rotation) //player x rotated to align with the tested floor tile
-        let rottedZ = player.x * sin(i.rotation) + player.y * cos(i.rotation)
-        if (rottedX > i.unrotX1 && rottedX < i.unrotX2 && rottedZ > i.unrotZ1 && rottedZ < i.unrotZ21){
-
+      if (player.y >= i.y - i.catchZone){
+        let relX = player.x - i.x
+        let relZ = player.z - 450 - i.z
+        let rottedX = relX * cos(i.rotation) - relZ * sin(i.rotation) //player x rotated to align with the tested floor tile
+        let rottedZ = relX * sin(i.rotation) + relZ * cos(i.rotation)
+        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2 && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){
+          player.currentFloor = i
         }
       }
     }
@@ -52,10 +55,11 @@ class floor{
     this.z = z
     this.rotation = rotation
     this.colour = colour
-    this.unrotX1 = x - width1/2
-    this.unrotX2 = x + width1/2
-    this.unrotZ1 = z - width2/2
-    this.unrotZ2 = z + width2/2
+    this.unrotX1 = -width1/2
+    this.unrotX2 = width1/2
+    this.unrotZ1 = -width2/2
+    this.unrotZ2 = width2/2
+    this.catchZone = catchZone
   }
 }
 
@@ -126,12 +130,12 @@ function setup() {
   noStroke();
   rectMode(CENTER)
   cam = createCamera();
-  player = new pc(100, 0, 100, 175, 0, 0, 4)
   walls = [
     new boundary(0, 0, 400, 0, stone, 200, 0), new boundary(400, 0, 400, 400, stone, 200, 0), new boundary(400, 400, 500, 400, stone, 200, 0),
-    new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), new boundary(100, 500, 0, 0, stone, 200, 0)
+    new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), new boundary(0, 500, 0, 0, stone, 200, 0)
   ]
-  floors = [new floor(400, 500, 200, 0, 250, 0, red), new floor(100, 100, 450, 100, 450, 0, red)]
+  floors = [new floor(400, 500, 200, 0, 250, 0, red, {}), new floor(100, 100, 450, 25, 450, 0, red, {})]
+  player = new pc(100, 0, 100, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerZ += player.z
@@ -183,13 +187,12 @@ function draw() {
       jumping = false
     }
   }
-  else if (jumpHeight > 0){
+  else if (player.y > player.currentFloor.y){
+    player.y -= 2
     cam.centerY += 2
     cam.eyeY += 2
-    player.y -= 2
-    player.eyeLevel -= 2
-    jumpHeight -= 2
-    if (jumpHeight < 0){
+    player.eyeLevel = player.y + player.height
+    if (player.y <= player.currentFloor.y){
       jumpHeight = 0
     }
   }
@@ -200,32 +203,32 @@ function controls(){
     //requestPointerLock()
     if(moveCheck('fw')){
       cam.move(0, 0, -player.speed)
-      //cam.eyeY = player.trackedFloor.y
     }
   }
   if (keyIsDown(83)){//s
     if(moveCheck('bw')){
       cam.move(0, 0, player.speed)
-      //cam.eyeY = player.trackedFloor.y
     }
   }
   if (keyIsDown(65)){//a
     if(moveCheck('lw')){
       cam.move(-player.speed, 0, 0)
-      //cam.eyeY = player.trackedFloor.y
     }
   }
   if (keyIsDown(68)){//d
     if(moveCheck('rw')){
       cam.move(player.speed, 0, 0)
-      //cam.eyeY = player.trackedFloor.y
     }
   }
   if (keyIsDown(32) && jumpHeight == 0){//space
     jumping = true
   }
-  //player.floorCheck()
+  player.floorCheck()
+  if (player.y < player.currentFloor.y){
+    player.y = player.currentFloor.y
+    player.eyeLevel = player.y + player.height
+  }
   player.x = cam.eyeX
   player.z = cam.eyeZ
-  player.y = 0
+  cam.eyeY = -player.eyeLevel
 }
