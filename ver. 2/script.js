@@ -47,7 +47,7 @@ class boundary{
 }
 
 class floor{
-  constructor(width1, width2, x, y, z, rotation, colour, {catchZone = 25}){
+  constructor(width1, width2, x, y, z, rotation, colour, {catchZone = 50}){
     this.width1 = width1
     this.width2 = width2
     this.x = x
@@ -134,7 +134,7 @@ function setup() {
     new boundary(0, 0, 400, 0, stone, 200, 0), new boundary(400, 0, 400, 400, stone, 200, 0), new boundary(400, 400, 500, 400, stone, 200, 0),
     new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), new boundary(0, 500, 0, 0, stone, 200, 0)
   ]
-  floors = [new floor(400, 500, 200, 0, 250, 0, red, {}), new floor(100, 100, 450, 25, 450, 0, red, {})]
+  floors = [new floor(400, 500, 200, 0, 250, 0, red, {}), new floor(100, 100, 450, 50, 450, 0, red, {})]
   player = new pc(100, 0, 100, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x

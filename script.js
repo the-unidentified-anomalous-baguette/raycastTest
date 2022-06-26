@@ -273,14 +273,14 @@ function draw(){
   for (let i = 0; i < seenWalls.length; i++){
     fill(seenWalls[i][2].colour[0] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]),
     seenWalls[i][2].colour[1] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]),
-    seenWalls[i][2].colour[2] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]))
+    seenWalls[i][2].colour[2] * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0]) * (1 - seenWalls[i][0])) // colour
     rect(
       512 - (512 * (player.angley-seenWalls[i][1])/45) - 4,
-      horizon + (288 * (1-seenWalls[i][0])) + //flat distance
-      (288 * tan(player.anglex) * seenWalls[i][0]) + //player rotation
-      ((player.eyeLevel - seenWalls[i][2].base) * (1-seenWalls[i][0])), //vertical distance
+      horizon + (288 * (1-seenWalls[i][0])) + // flat distance
+      (288 * tan(player.anglex) * seenWalls[i][0]) + // player rotation up/down
+      ((player.eyeLevel - seenWalls[i][2].base) * (1-seenWalls[i][0])), // vertical distance
       8, 
-      (-seenWalls[i][2].height * (1-seenWalls[i][0])) - Math.abs((1-seenWalls[i][0]) * tan(player.anglex))// + ((1-seenWalls[i][0]) * seenWalls[i][2].height * tan(player.anglex))
+      (-seenWalls[i][2].height * (1-seenWalls[i][0])) - Math.abs((1-seenWalls[i][0]) * tan(player.anglex))
       )
   }
   strokeWeight(1)
