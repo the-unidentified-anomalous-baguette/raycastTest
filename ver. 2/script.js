@@ -113,7 +113,7 @@ function moveCheck(dir){
     let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
     let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
     //console.log(i)
-    if (t >= 0 && t <= 1 && u >= 0 && u <= 2 && i.base <= player.eyeLevel && i.base + i.height >= player.y){
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 2 && i.base <= player.eyeLevel && i.base + i.height >= player.y + 51){
       return false
     }
   }
@@ -132,7 +132,8 @@ function setup() {
   cam = createCamera();
   walls = [
     new boundary(0, 0, 400, 0, stone, 200, 0), new boundary(400, 0, 400, 400, stone, 200, 0), new boundary(400, 400, 500, 400, stone, 200, 0),
-    new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), new boundary(0, 500, 0, 0, stone, 200, 0)
+    new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), new boundary(0, 500, 0, 0, stone, 200, 0),
+    new boundary(400, 400, 400, 500, red, 50, 0)
   ]
   floors = [new floor(400, 500, 200, 0, 250, 0, red, {}), new floor(100, 100, 450, 50, 450, 0, red, {})]
   player = new pc(100, 0, 100, 175, 0, 0, 4, floors[0])
