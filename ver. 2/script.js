@@ -106,13 +106,9 @@ function moveCheck(dir){
     let x2 = i.x2
     let z1 = i.z1 + 450
     let z2 = i.z2 + 450
-    //console.log(x1, x2, x3, x4)
-    // console.log(player.z)
-    // console.log(z1, z2, z3, z4)
     let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
     let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
     let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-    //console.log(i)
     if (t >= 0 && t <= 1 && u >= 0 && u <= 2 && i.base <= player.eyeLevel && i.base + i.height >= player.y + 51){
       return false
     }
@@ -131,23 +127,29 @@ function setup() {
   rectMode(CENTER)
   cam = createCamera();
   walls = [
-    new boundary(0, 0, 400, 0, stone, 200, 0), new boundary(400, 0, 400, 400, stone, 200, 0), new boundary(400, 400, 500, 400, stone, 200, 0),
-    new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), new boundary(0, 500, 0, 0, stone, 200, 0),
-    new boundary(400, 400, 400, 500, red, 50, 0)
+    new boundary(0, 0, 400, 0, stone, 250, 0), new boundary(400, 0, 400, 400, stone, 250, 0), //new boundary(400, 400, 500, 400, stone, 200, 0),
+    //new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), 
+    new boundary(0, 500, 0, 0, stone, 250, 0),
+    new boundary(400, 400, 400, 500, red, 50, 0), new boundary(429, 400, 500, 471, red, 50, 50), new boundary(450, 400, 550, 400, red, 50, 100),
+    new boundary(400, 400, 450, 400, stone, 250, 0), new boundary(450, 400, 450, 300, stone, 100, 150), new boundary(450, 300, 550, 300, stone, 100, 150),
+    new boundary(550, 300, 500, 471, stone, 150, 100), new boundary(500, 471, 0, 500, stone, 250, 0)
   ]
-  floors = [new floor(400, 500, 200, 0, 250, 0, red, {}), new floor(100, 100, 450, 50, 450, 0, red, {})]
+  floors = [
+    new floor(400, 500, 200, 0, 250, 0, red, {}), new floor(100, 100, 450, 50, 450, 0, red, {}), new floor(100, 100, 500, 100, 400, 45, red, {}),
+    new floor(100, 100, 500, 150, 350, 0, red, {})
+  ]
   player = new pc(100, 0, 100, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerZ += player.z
   cam.eyeZ += player.z
   cam.centerY -= 175
-  cam.eyeY -= 175
+  cam.eyeY -= 17
   console.log(cam)
-  //noStroke()
-  stroke(255)
+  noStroke()
+  stroke(0)
   //texture(img)
-  strokeWeight(2)
+  strokeWeight(1)
 }
 
 function draw() {
