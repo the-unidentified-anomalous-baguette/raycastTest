@@ -69,6 +69,7 @@ let walls;
 let floors;
 let jumping = false
 let jumpHeight = 0
+let font
 //let img;
 
 function moveCheck(dir){
@@ -116,9 +117,9 @@ function moveCheck(dir){
   return true
 }
 
-// function preload(){
-//   img = loadImage('impdance.gif')
-// }
+function preload(){
+  font = loadFont('upperercase.ttf')
+}
 
 function setup() {
   createCanvas(1024, 576, WEBGL);
@@ -150,6 +151,7 @@ function setup() {
   stroke(0)
   //texture(img)
   strokeWeight(1)
+  textFont(font)
 }
 
 function draw() {
@@ -168,7 +170,7 @@ function draw() {
     rotateY(i.angle)
     plane(i.width, i.height)
     pop()
-    line(i.x1, i.z1 + 450, i.x2, i.z2 + 450)
+    //line(i.x1, i.z1 + 450, i.x2, i.z2 + 450)
   }
   for (let i of floors){
     push()
@@ -179,7 +181,7 @@ function draw() {
     plane(i.width1, i.width2)
     pop()
   }
-  circle(player.x, player.z, 10)
+  //circle(player.x, player.z, 10)
   if (jumping){
     cam.centerY -= 2
     cam.eyeY -= 2
@@ -199,6 +201,7 @@ function draw() {
       jumpHeight = 0
     }
   }
+  ui()
 }
 
 function controls(){
@@ -234,4 +237,7 @@ function controls(){
   player.x = cam.eyeX
   player.z = cam.eyeZ
   cam.eyeY = -player.eyeLevel
+}
+
+function ui(){
 }
