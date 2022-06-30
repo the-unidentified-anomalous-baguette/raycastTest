@@ -64,6 +64,7 @@ class floor{
 }
 
 let cam;
+let uiCam;
 let player;
 let walls;
 let floors;
@@ -124,9 +125,12 @@ function preload(){
 function setup() {
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
+  textAlign(CENTER)
   noStroke();
   rectMode(CENTER)
   cam = createCamera();
+  uiCam = createCamera();
+  setCamera(cam)
   walls = [
     new boundary(0, 0, 400, 0, stone, 250, 0), new boundary(400, 0, 400, 400, stone, 250, 0), //new boundary(400, 400, 500, 400, stone, 200, 0),
     //new boundary(500, 400, 500, 500, stone, 200, 0), new boundary(500, 500, 0, 500, stone, 200, 0), 
@@ -148,7 +152,7 @@ function setup() {
   cam.eyeY -= 17
   console.log(cam)
   noStroke()
-  stroke(0)
+  stroke(255)
   //texture(img)
   strokeWeight(1)
   textFont(font)
@@ -157,12 +161,18 @@ function setup() {
 function draw() {
   background(0)
   controls()
-  cam.pan(-movedX/2)
-  cam.tilt(movedY/2);
+  if (keyIsDown(39)){
+    console.log(cam.centerX, cam.centerY, cam.centerZ)
+  }
+  //cam.pan(-movedX/2)
+  //cam.tilt(movedY/2);
   cam.tilt(keyIsDown(40))
   cam.tilt(-keyIsDown(38))
   cam.pan(-keyIsDown(39))
   cam.pan(keyIsDown(37))
+  if (keyIsDown(39)){
+    console.log(cam.centerX, cam.centerY, cam.centerZ)
+  }
   for (let i of walls){
     push()
     fill(i.colour);
@@ -170,7 +180,7 @@ function draw() {
     rotateY(i.angle)
     plane(i.width, i.height)
     pop()
-    //line(i.x1, i.z1 + 450, i.x2, i.z2 + 450)
+    line(i.x1, i.z1 + 450, i.x2, i.z2 + 450)
   }
   for (let i of floors){
     push()
@@ -240,4 +250,11 @@ function controls(){
 }
 
 function ui(){
+  push()
+  setCamera(uiCam)
+  uiCam.setPosition(0, 0, 50)
+  translate(0, 50, -50)
+  fill(255, 0, 0)
+  rect(0, 0, 50, 10)
+  pop()
 }
