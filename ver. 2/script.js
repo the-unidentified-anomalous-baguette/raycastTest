@@ -15,14 +15,17 @@ class pc{
   }
 
   floorCheck(){
-    for (let i of floors){
+    for (let i of floors){ // check every floor tile
       if (player.y >= i.y - i.catchZone){
         let relX = player.x - i.x
         let relZ = player.z - 450 - i.z
-        let rottedX = relX * cos(i.rotation) - relZ * sin(i.rotation) //player x rotated to align with the tested floor tile
+        let rottedX = relX * cos(i.rotation) - relZ * sin(i.rotation)
+        // player coords rotated to align with the tested floor tile
         let rottedZ = relX * sin(i.rotation) + relZ * cos(i.rotation)
-        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2 && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){
-          player.currentFloor = i
+        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2 
+          && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){
+          // checking if player is on the tile
+          player.currentFloor = i // sets the floor the player stands on
         }
       }
     }
@@ -118,9 +121,9 @@ function moveCheck(dir){
   return true
 }
 
-function preload(){
-  font = loadFont('upperercase.ttf')
-}
+// function preload(){
+//   font = loadFont('upperercase.ttf')
+// }
 
 function setup() {
   createCanvas(1024, 576, WEBGL);
@@ -150,12 +153,14 @@ function setup() {
   cam.eyeZ += player.z
   cam.centerY -= 175
   cam.eyeY -= 17
-  console.log(cam)
+  cam.cameraNear = 0
+  uiCam.cameraNear = 0
+  console.log(uiCam)
   noStroke()
   stroke(255)
   //texture(img)
   strokeWeight(1)
-  textFont(font)
+  //textFont(font)
 }
 
 function draw() {
@@ -164,8 +169,8 @@ function draw() {
   if (keyIsDown(39)){
     console.log(cam.centerX, cam.centerY, cam.centerZ)
   }
-  //cam.pan(-movedX/2)
-  //cam.tilt(movedY/2);
+  cam.pan(-movedX/2)
+  cam.tilt(movedY/2);
   cam.tilt(keyIsDown(40))
   cam.tilt(-keyIsDown(38))
   cam.pan(-keyIsDown(39))
@@ -180,7 +185,6 @@ function draw() {
     rotateY(i.angle)
     plane(i.width, i.height)
     pop()
-    line(i.x1, i.z1 + 450, i.x2, i.z2 + 450)
   }
   for (let i of floors){
     push()
@@ -250,11 +254,18 @@ function controls(){
 }
 
 function ui(){
-  push()
-  setCamera(uiCam)
-  uiCam.setPosition(0, 0, 50)
-  translate(0, 50, -50)
-  fill(255, 0, 0)
-  rect(0, 0, 50, 10)
+  push() // auto reverses changes
+    strokeWeight(0.1)
+    setCamera(uiCam) // switches cam
+    uiCam.setPosition(0, 0, 50)
+    push() // health bar
+      translate(0, 25, 0)
+      fill(255, 0, 0)
+      rect(0, 0, 30, 3) // replace 50 with hp
+    pop()
+    push() // crosshair
+      line(-1, -1, 1, 1)
+      line(1, -1, -1, 1)
+    pop()
   pop()
 }
