@@ -49,9 +49,47 @@ class ai{
   findPath(dest){
     let paths = [[[this.path[0]]]]
     let pathFound = 0
-    let whichNode = 0
-    let pathNodes = []
+    let whichNode = dest.id
     let onDupe = false
+    while (pathFound == 0){
+      onDupe = false
+      paths.push([])
+      for (let i of paths[paths.length - 2]){
+        for (let j of i[0].connectedNodes){
+          for (let k of paths){
+            if (k != paths[paths.length - 1]){
+              for (let l of k){
+                if (l[0].id == grid[j].id){
+                  onDupe = true
+                  break
+                }
+              }
+            }
+          }
+          if (onDupe == false){
+            paths[paths.length - 1].push([grid[j], i[0].id])
+          }
+        }
+      }
+      for (let j of paths[paths.length - 1]){
+        if (j[0].id == dest.id){
+          pathFound = 1
+          break
+        }
+      }
+    }
+    // console.log(paths)
+    this.path = []
+    for (let i = paths.length - 1; i >= 0; i -= 1){
+      for (let j of paths[i]){
+        if (j[0].id == whichNode){
+          this.path.unshift([j[0].x, j[0].z])
+          whichNode = j[1]
+          break
+        }
+      }
+    }
+    console.log(this.path)
   }
 }
 
@@ -135,8 +173,8 @@ function fullPathfinding(AI){
   if (AI.goal.length == 0){
     finalNode = AI.chooseGoal()
     AI.path.push(AI.findFirstNode())
-    //AI.findPath(finalNode)
-    console.log(AI.path[0])
+    AI.findPath(finalNode)
+    //console.log(AI.path)
   }
 }
 
@@ -156,7 +194,7 @@ function setup(){
     new boundary(250, 250, 250, 300), new boundary(250, 300, 300, 325), new boundary(300, 325, 250, 350), new boundary (250, 350, 200, 340),
     new boundary(200, 340, 80, 220), new boundary(150, 125, 180, 140), new boundary(180, 140, 200, 112.5)
   ]
-  ai1 = new ai(52, 52, [], [])
+  ai1 = new ai(random(100, 200), random(100, 200), [], [])
   fill(255)
   stroke(255)
   background(0)
