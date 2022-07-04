@@ -15,19 +15,43 @@ class ai{
         nodes.push([i, dist(i.x, i.z, this.goal[0], this.goal[1])])
       }
       nodes.sort(sortFunction)
-      while (foundGoal == false && nodes.length >= 1){
+      while (nodes.length >= 1){
         for (let i of walls){
           if (intersectCheck([nodes[0][0].x, nodes[0][0].z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){
             nodes.shift()
             break
           }
           else if (i == walls[walls.length - 1]){
-            foundGoal = true
-            console.log(nodes[0][0].id)
+            return nodes[0][0]
           }
         }
       }
     }
+  }
+
+  findFirstNode(){
+    let nodes = []
+    for (let i of grid){
+      nodes.push([i, dist(this.x, this.z, i.x, i.z)])
+    }
+    nodes.sort(sortFunction)
+    for (let i of walls){
+      if (intersectCheck([this.x, this.z], [nodes[0][0].x, nodes[0][0].z], [i.x1, i.z1], [i.x2, i.z2])){
+        nodes.shift()
+        break
+      }
+      else {
+        return nodes[0][0]
+      }
+    }
+  }
+
+  findPath(dest){
+    let paths = [[[this.path[0]]]]
+    let pathFound = 0
+    let whichNode = 0
+    let pathNodes = []
+    let onDupe = false
   }
 }
 
@@ -108,11 +132,11 @@ function renderWorld(){
 }
 
 function fullPathfinding(AI){
-  if (AI.goal = []){
-    let finalNode = AI.chooseGoal()
-  }
-  if (AI.path = []){
-    path.push(AI.findFirstNode())
+  if (AI.goal.length == 0){
+    finalNode = AI.chooseGoal()
+    AI.path.push(AI.findFirstNode())
+    //AI.findPath(finalNode)
+    console.log(AI.path[0])
   }
 }
 
@@ -139,7 +163,6 @@ function setup(){
 }
 
 function draw(){
-  renderWorld()
   /** how to pathfinding:
    * choose destination coordinates
    * find the nearest node that it can be reached from
@@ -151,5 +174,6 @@ function draw(){
    * store each vector of found path
    * execute
    */
-  ai1.chooseGoal()
+  fullPathfinding(ai1)
+  renderWorld()
 }
