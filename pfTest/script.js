@@ -84,7 +84,7 @@ function intersectCheck(l11, l12, l21, l22){
 }
 
 function renderWorld(){
-  //background(0)
+  background(0)
   strokeWeight(3)
   stroke(255)
   for (let i of walls){
@@ -101,9 +101,19 @@ function renderWorld(){
     fill(0, 0, 255)
     text(i.id, i.x, i.z)
   }
+  circle(ai1.x, ai1.z, 20)
   fill(255, 0, 0)
   noStroke()
   circle(ai1.goal[0], ai1.goal[1], 10)
+}
+
+function fullPathfinding(AI){
+  if (AI.goal = []){
+    let finalNode = AI.chooseGoal()
+  }
+  if (AI.path = []){
+    path.push(AI.findFirstNode())
+  }
 }
 
 function setup(){
@@ -111,10 +121,10 @@ function setup(){
   angleMode(DEGREES)
   textSize(20)
   grid = [
-    new pathNode(100, 100, [1, 2, 3], 'a'), new pathNode(200, 100, [0], 'b'), 
+    new pathNode(100, 100, [1, 2, 3], 'a'), new pathNode(200, 80, [0], 'b'), 
     new pathNode(100, 200, [0, 3, 4], 'c'), new pathNode(200, 200, [0, 2, 4, 5], 'd'), 
-    new pathNode(250, 125, [3, 2], 'e'), new pathNode(225, 270, [3, 6, 7], 'f'), new pathNode(140, 260, [5], 'g'),
-    new pathNode(230, 320, [5], 'h')
+    new pathNode(250, 125, [3, 2], 'e'), new pathNode(225, 270, [3, 6, 7], 'f'), new pathNode(140, 260, [5, 7], 'g'),
+    new pathNode(230, 320, [5, 6], 'h')
   ]
   walls = [
     new boundary(50, 50, 250, 50), new boundary(250, 50, 250, 100), new boundary(250, 100, 150, 125),
@@ -122,7 +132,7 @@ function setup(){
     new boundary(250, 250, 250, 300), new boundary(250, 300, 300, 325), new boundary(300, 325, 250, 350), new boundary (250, 350, 200, 340),
     new boundary(200, 340, 80, 220), new boundary(150, 125, 180, 140), new boundary(180, 140, 200, 112.5)
   ]
-  ai1 = new ai(50, 50, [], [])
+  ai1 = new ai(52, 52, [], [])
   fill(255)
   stroke(255)
   background(0)
