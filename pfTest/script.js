@@ -131,14 +131,22 @@ class ai{
       this.x -= sin(angle) * hyp
       this.z += cos(angle) * hyp
     } // move directly onto it if close enough
-    for (let i of walls){
-      // checks for shortcut
-      if (intersectCheck([this.x, this.z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){
-        break
+    let pathLength = this.path.length
+    for (let j = this.path.length - 1; j >= 0; j -= 1){
+      for (let i of walls){
+        // checks for shortcut
+        if (intersectCheck([this.x, this.z], this.path[j], [i.x1, i.z1], [i.x2, i.z2])){
+          break
+        }
+        else if (i == walls[walls.length - 1]){
+          // if no walls between AI and final goal, remove intermediate nodes
+          for (let k = 0; k < j; k++){
+            this.path.shift()
+          }
+        }
       }
-      else if (i == walls[walls.length - 1]){
-        // if no walls between AI and final goal, remove intermediate nodes
-        this.path = [this.goal]
+      if (this.path.length < pathLength){
+        break
       }
     }
     if (Math.floor(this.x) == Math.floor(this.path[0][0]) && Math.floor(this.z) == Math.floor(this.path[0][1])){
@@ -173,7 +181,7 @@ class boundary{
 
 let grid
 let walls
-let ai1
+let ais
 
 function sortFunction(a, b) {
   if (a[1] === b[1]) {
@@ -223,10 +231,15 @@ function renderWorld(){
     fill(0, 0, 255)
     text(i.id, i.x, i.z)
   }
-  circle(ai1.x, ai1.z, 20)
-  fill(255, 0, 0)
-  noStroke()
-  circle(ai1.goal[0], ai1.goal[1], 10)
+  for (let ai1 of ais){
+    strokeWeight(2)
+    stroke(0, 255, 0)
+    fill(0, 0, 255)
+    circle(ai1.x, ai1.z, 20)
+	fill(255, 0, 0)
+	noStroke()
+	circle(ai1.goal[0], ai1.goal[1], 10)
+  }
 }
 
 function fullPathfinding(AI){
@@ -269,9 +282,9 @@ function setup(){
     new boundary(200, 340, 80, 220), new boundary(150, 125, 180, 140), new boundary(180, 140, 200, 112.5), new boundary(300, 200, 280, 150),
     new boundary(280, 150, 350, 190), new boundary(350, 190, 310, 205), new boundary(310, 205, 340, 250), new boundary(340, 250, 400, 250),
     new boundary(400, 250, 430, 210), new boundary(430, 210, 390, 160), new boundary(390, 160, 365, 160), new boundary(365, 160, 370, 100),
-    new boundary(370, 100, 300, 90), new boundary(370, 100, 350, 120)
+    new boundary(370, 100, 300, 90), new boundary(370, 100, 300, 120)
   ]
-  ai1 = new ai(200, 100, [], [], 4)
+  ais = [new ai(200, 100, [], [], 4)]
   fill(255)
   stroke(255)
   background(0)
@@ -290,7 +303,9 @@ function draw(){
    * store each vector of found path
    * execute
    */
-  fullPathfinding(ai1)
+  for (let i of ais){
+	fullPathfinding(i)
+  }
   renderWorld()
   // text(ai1.followPath(), 512, 288)
 }
