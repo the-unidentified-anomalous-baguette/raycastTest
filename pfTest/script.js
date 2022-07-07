@@ -20,7 +20,8 @@ class ai{
       // put nodes into a list sorted by distance from goal
       while (nodes.length >= 1){
         for (let i of walls){
-          if (intersectCheck([nodes[0][0].x, nodes[0][0].z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){
+          if (intersectCheck(
+            [nodes[0][0].x, nodes[0][0].z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){
             // start from first sorted node, check if there's a wall between it and goal
             nodes.shift() // remove from list if there are
             break
@@ -44,7 +45,8 @@ class ai{
     nodes.sort(sortFunction)
     for (let i of nodes){
       for (let j of walls){
-        if (intersectCheck([this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2])){
+        if (intersectCheck(
+          [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2])){
           break
         }
         else if (j == walls[walls.length - 1]){
@@ -197,7 +199,7 @@ function intersectCheck(l11, l12, l21, l22){
   if (den == 0){return false}
   let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
   let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-  if (t >= -.1 && t <= 1.1 && u >= -.1 && u <= 1.1){
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1){
     return true
   } 
   return false
@@ -246,10 +248,8 @@ function fullPathfinding(AI){
       AI.path.push(AI.goal) // add final goal to end of instructions
     }
   }
-  else {
-    // if it has a path, follow it
-    AI.followPath()
-  }
+  // if it has a path, follow it
+  AI.followPath()
 }
 
 function setup(){
