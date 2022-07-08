@@ -18,7 +18,7 @@ class pc{
     for (let i of floors){ // check every floor tile
       if (player.y >= i.y - i.catchZone){
         let relX = player.x - i.x
-        let relZ = player.z - 450 - i.z
+        let relZ = player.z - i.z
         let rottedX = relX * cos(i.rotation) - relZ * sin(i.rotation)
         // player coords rotated to align with the tested floor tile
         let rottedZ = relX * sin(i.rotation) + relZ * cos(i.rotation)
@@ -79,42 +79,34 @@ let font
 function moveCheck(dir){
   let x3 = player.x
   let z3 = player.z
+  let x4
+  let z4
   if (dir == 'fw'){
-    cam.move(0, 0, -player.speed)
+    x4 = player.x + sin(player.angleLR) * player.speed
+    z4 = player.z - cos(player.angleLR) * player.speed
   }
   else if (dir == 'bw'){
-    cam.move(0, 0, player.speed)
+    x4 = player.x - sin(player.angleLR) * player.speed
+    z4 = player.z + cos(player.angleLR) * player.speed
   }
   else if (dir == 'lw'){
-    cam.move(-player.speed, 0, 0)
+    x4 = player.x - cos(player.angleLR) * player.speed
+    z4 = player.z - sin(player.angleLR) * player.speed
   }
   else {
-    cam.move(player.speed, 0, 0)
-  }
-  let x4 = cam.eyeX
-  let z4 = cam.eyeZ
-  if (dir == 'fw'){
-    cam.move(0, 0, player.speed)
-  }
-  else if (dir == 'bw'){
-    cam.move(0, 0, -player.speed)
-  }
-  else if (dir == 'lw'){
-    cam.move(player.speed, 0, 0)
-  }
-  else {
-    cam.move(-player.speed, 0, 0)
+    x4 = player.x + cos(player.angleLR) * player.speed
+    z4 = player.z + sin(player.angleLR) * player.speed
   }
 
   for (let i of walls){
     let x1 = i.x1
     let x2 = i.x2
-    let z1 = i.z1 + 450
-    let z2 = i.z2 + 450
+    let z1 = i.z1
+    let z2 = i.z2
     let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
     let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
     let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-    if (t >= 0 && t <= 1 && u >= 0 && u <= 2 && i.base <= player.eyeLevel && i.base + i.height >= player.y + 51){
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= player.eyeLevel && i.base + i.height >= player.y + 51){
       return false
     }
   }
@@ -149,10 +141,10 @@ function setup() {
   player = new pc(100, 0, 100, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
-  cam.centerZ += player.z
-  cam.eyeZ += player.z
   cam.centerY -= 175
   cam.eyeY -= 17
+  cam.centerZ += player.z
+  cam.eyeZ += player.z
   cam.cameraNear = 0
   uiCam.cameraNear = 0
   console.log(uiCam)
@@ -166,18 +158,20 @@ function setup() {
 function draw() {
   background(0)
   controls()
-  if (keyIsDown(39)){
-    console.log(cam.centerX, cam.centerY, cam.centerZ)
-  }
-  cam.pan(-movedX/2)
-  cam.tilt(movedY/2);
-  cam.tilt(keyIsDown(40))
-  cam.tilt(-keyIsDown(38))
-  cam.pan(-keyIsDown(39))
-  cam.pan(keyIsDown(37))
-  if (keyIsDown(39)){
-    console.log(cam.centerX, cam.centerY, cam.centerZ)
-  }
+  cam.pan(0)
+  cam.tilt(0)
+  // if (keyIsDown(39)){
+  //   console.log(cam.centerX, cam.centerY, cam.centerZ)
+  // }
+  // cam.pan(-movedX/2)
+  // cam.tilt(movedY/2);
+  // cam.tilt(keyIsDown(40))
+  // cam.tilt(-keyIsDown(38))
+  // cam.pan(-keyIsDown(39))
+  // cam.pan(keyIsDown(37))
+  // if (keyIsDown(39)){
+  //   console.log(cam.centerX, cam.centerY, cam.centerZ)
+  // }
   for (let i of walls){
     push()
     fill(i.colour);
@@ -220,37 +214,66 @@ function draw() {
 
 function controls(){
   if (keyIsDown(87)){//w
-    //requestPointerLock()
     if(moveCheck('fw')){
-      cam.move(0, 0, -player.speed)
+      player.x += player.speed * sin(player.angleLR)
+      player.z -= player.speed * cos(player.angleLR)
+      cam.eyeX += player.speed * sin(player.angleLR)
+      cam.eyeZ -= player.speed * cos(player.angleLR)
     }
   }
   if (keyIsDown(83)){//s
     if(moveCheck('bw')){
-      cam.move(0, 0, player.speed)
+      player.x -= player.speed * sin(player.angleLR)
+      player.z += player.speed * cos(player.angleLR)
+      cam.eyeX -= player.speed * sin(player.angleLR)
+      cam.eyeZ += player.speed * cos(player.angleLR)
     }
   }
   if (keyIsDown(65)){//a
     if(moveCheck('lw')){
-      cam.move(-player.speed, 0, 0)
+      player.x -= player.speed * cos(player.angleLR)
+      player.z -= player.speed * sin(player.angleLR)
+      cam.eyeX -= player.speed * cos(player.angleLR)
+      cam.eyeZ -= player.speed * sin(player.angleLR)
     }
   }
   if (keyIsDown(68)){//d
     if(moveCheck('rw')){
-      cam.move(player.speed, 0, 0)
+      player.x += player.speed * cos(player.angleLR)
+      player.z += player.speed * sin(player.angleLR)
+      cam.eyeX += player.speed * cos(player.angleLR)
+      cam.eyeZ += player.speed * sin(player.angleLR)
     }
   }
+  if (keyIsDown(37)){//left
+    player.angleLR -= 3
+  }
+  if (keyIsDown(38)){//up
+    if (player.angleUD < 75){
+      player.angleUD += 1
+    }
+  }
+  if (keyIsDown(39)){//right key
+    player.angleLR += 3 // rotate right
+  }
+  if (keyIsDown(40)){//down key
+    if (player.angleUD > -75){ // limit angle
+      player.angleUD -= 1
+    }
+  }
+  cam.eyeY = -player.eyeLevel
+  // adjust view around player by trig values
+  cam.centerX = cam.eyeX + sin(player.angleLR)
+  cam.centerY = cam.eyeY - tan(player.angleUD)
+  cam.centerZ = cam.eyeZ - cos(player.angleLR)
   if (keyIsDown(32) && jumpHeight == 0){//space
     jumping = true
   }
   player.floorCheck()
   if (player.y < player.currentFloor.y){
-    player.y = player.currentFloor.y
+    player.y += player.speed
     player.eyeLevel = player.y + player.height
   }
-  player.x = cam.eyeX
-  player.z = cam.eyeZ
-  cam.eyeY = -player.eyeLevel
 }
 
 function ui(){
