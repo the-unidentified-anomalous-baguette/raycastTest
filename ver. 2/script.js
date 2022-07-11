@@ -1,6 +1,56 @@
 let red = [200,10, 10]
+let green = [10, 200, 10]
 let stone = [128, 120, 133]
 let purple = [127, 0, 255]
+
+class menuButton{
+  constructor(x, y, w, h, func, spriteSheet, sW, sH, text, textColour){
+    this.collX = x
+    this.collY = y
+    this.collW = x + w
+    this.collH = y + h
+    this.h = h
+    this.w = w
+    this.transX = x + (w/2)
+    this.transY = y + (h/2)
+    this.func = func
+    this.spriteSheet = spriteSheet
+    this.sW = sW
+    this.sH = sH
+    this.text = text
+    this.textColour = textColour
+  }
+
+  checkHovered(){
+    let mousePosX = (mouseX - 512)*(52/512)
+    let mousePosY = (mouseY - 288)*(29/288)
+    console.log(mousePosX)
+    if (mousePosX >= this.collX && mousePosX <= this.collW && mousePosY >= this.collY && mousePosY <= this.collH){
+      return 1
+    }
+    return 0
+  }
+
+  render(){
+    push()
+      translate(this.transX, this.transY, 0)
+      fill(this.spriteSheet[this.checkHovered()])
+      rect(0, 0, this.w, this.h)
+      fill(this.textColour)
+      translate(0, this.h/2)
+      text(this.text, 0, 0)
+    pop()
+  }
+
+  executeFunc(){
+    if (this.checkHovered()){
+      switch (this.func){
+        case 'beginGame':
+          beginGame()
+      }
+    }
+  }
+}
 
 class pc{
   constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor){
@@ -29,6 +79,113 @@ class pc{
           player.currentFloor = i // sets the floor the player stands on
         }
       }
+    }
+  }
+
+  moveCheck(dir){
+    let x3 = this.x
+    let z3 = this.z
+    let x4
+    let z4
+    if (dir == 'fw'){
+      x4 = this.x + sin(this.angleLR) * this.speed
+      z4 = this.z - cos(this.angleLR) * this.speed
+    }
+    else if (dir == 'bw'){
+      x4 = this.x - sin(this.angleLR) * this.speed
+      z4 = this.z + cos(this.angleLR) * this.speed
+    }
+    else if (dir == 'lw'){
+      x4 = this.x - cos(this.angleLR) * this.speed
+      z4 = this.z - sin(this.angleLR) * this.speed
+    }
+    else {
+      x4 = this.x + cos(this.angleLR) * this.speed
+      z4 = this.z + sin(this.angleLR) * this.speed
+    }
+  
+    for (let i of walls){
+      let x1 = i.x1
+      let x2 = i.x2
+      let z1 = i.z1
+      let z2 = i.z2
+      let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+        return false
+      }
+    }
+    return true
+  }
+
+  controls(){
+    if (keyIsDown(87)){//w
+      if(this.moveCheck('fw')){
+        this.x += this.speed * sin(this.angleLR)
+        this.z -= this.speed * cos(this.angleLR)
+        cam.eyeX += this.speed * sin(this.angleLR)
+        cam.eyeZ -= this.speed * cos(this.angleLR)
+      }
+    }
+    if (keyIsDown(83)){//s
+      if(this.moveCheck('bw')){
+        this.x -= this.speed * sin(this.angleLR)
+        this.z += this.speed * cos(this.angleLR)
+        cam.eyeX -= this.speed * sin(this.angleLR)
+        cam.eyeZ += this.speed * cos(this.angleLR)
+      }
+    }
+    if (keyIsDown(65)){//a
+      if(this.moveCheck('lw')){
+        this.x -= this.speed * cos(this.angleLR)
+        this.z -= this.speed * sin(this.angleLR)
+        cam.eyeX -= this.speed * cos(this.angleLR)
+        cam.eyeZ -= this.speed * sin(this.angleLR)
+      }
+    }
+    if (keyIsDown(68)){//d
+      if(this.moveCheck('rw')){
+        this.x += this.speed * cos(this.angleLR)
+        this.z += this.speed * sin(this.angleLR)
+        cam.eyeX += this.speed * cos(this.angleLR)
+        cam.eyeZ += this.speed * sin(this.angleLR)
+      }
+    }
+    if (keyIsDown(37)){//left
+      this.angleLR -= 3
+      if (this.angleLR < 0){
+        this.angleLR += 360
+      }
+    }
+    if (keyIsDown(38)){//up
+      if (this.angleUD < 75){
+        this.angleUD += 1
+      }
+    }
+    if (keyIsDown(39)){//right key
+      this.angleLR += 3 // rotate right
+      if (this.angleLR > 360){
+        this.angleLR -= 360
+      }
+    }
+    if (keyIsDown(40)){//down key
+      if (this.angleUD > -45){ // limit angle
+        this.angleUD -= 1
+      }
+    }
+    cam.eyeY = -this.eyeLevel
+    // adjust view around player by trig values
+    cam.centerX = cam.eyeX + sin(this.angleLR)
+    cam.centerY = cam.eyeY - tan(this.angleUD)
+    cam.centerZ = cam.eyeZ - cos(this.angleLR)
+    if (keyIsDown(32) && jumpHeight == 0){//space
+      jumping = true
+    }
+    this.floorCheck()
+    if (this.y < this.currentFloor.y){
+      this.y += this.speed
+      this.eyeLevel = this.y + this.height
     }
   }
 }
@@ -88,20 +245,17 @@ class entity{
   }
   
   render(){
-    // let relX = player.x - this.x
-    // let relZ = player.z - this.z
-    // let relRotX = relX * cos(player.angleLR) - relZ * sin(player.angleLR)
-    // let relRotZ = relX * sin(player.angleLR) + relZ * cos(player.angleLR)
-    // let extraAngle = asin((player.x - relRotX)/dist(this.x, this.z, player.x, player.z))
-    //console.log(extraAngle)
-    console.log(8-Math.floor((22.5+player.angleLR)/45))
+    let spriteAngle = 8 - Math.floor((player.angleLR +22.5)/45)
+    if (spriteAngle == 8){
+      spriteAngle = 0
+    }
     push()
     translate(this.x, this.midVert, this.z + 500)
     rotateY(360 - player.angleLR)
     image(this.spriteSheet,
       -this.collWidth/2, -this.height/2,
       this.collWidth, this.height,
-      0, 122 * (8 - Math.floor(player.angleLR/45)),
+      0, (122 * spriteAngle) + 1,
       84, 122
       )
     pop()
@@ -109,11 +263,13 @@ class entity{
 }
 
 class ai extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed){
+  constructor(x, y, z, spriteSheet, collWidth, height, speed, inventory, trackingMode){
     super(x, y, z, spriteSheet, collWidth, height)
     this.path = []
     this.goal = []
     this.speed = speed
+    this.inventory = inventory
+    this.trackingMode = trackingMode
   }
 
   chooseGoal(){
@@ -279,10 +435,9 @@ class staticNPC extends entity{
 }
 
 class movingNPC extends ai{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, menu, inventory){
-    super(x, y, z, spriteSheet, collWidth, height, speed)
+  constructor(x, y, z, spriteSheet, collWidth, height, speed, menu, inventory, trackingMode){
+    super(x, y, z, spriteSheet, collWidth, height, speed, inventory, trackingMode)
     this.menu = menu
-    this.inventory = inventory
   }
 }
 
@@ -291,6 +446,10 @@ class container extends entity{
     super(x, y, z, spriteSheet, collWidth, height)
     this.inventory = inventory
   }
+}
+
+function beginGame(){
+  gameState = 'game'
 }
 
 let cam;
@@ -303,48 +462,13 @@ let jumpHeight = 0
 let font
 let grid
 let objects
-let img
-
-function moveCheck(dir){
-  let x3 = player.x
-  let z3 = player.z
-  let x4
-  let z4
-  if (dir == 'fw'){
-    x4 = player.x + sin(player.angleLR) * player.speed
-    z4 = player.z - cos(player.angleLR) * player.speed
-  }
-  else if (dir == 'bw'){
-    x4 = player.x - sin(player.angleLR) * player.speed
-    z4 = player.z + cos(player.angleLR) * player.speed
-  }
-  else if (dir == 'lw'){
-    x4 = player.x - cos(player.angleLR) * player.speed
-    z4 = player.z - sin(player.angleLR) * player.speed
-  }
-  else {
-    x4 = player.x + cos(player.angleLR) * player.speed
-    z4 = player.z + sin(player.angleLR) * player.speed
-  }
-
-  for (let i of walls){
-    let x1 = i.x1
-    let x2 = i.x2
-    let z1 = i.z1
-    let z2 = i.z2
-    let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-    let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-    let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-    if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= player.eyeLevel && i.base + i.height >= player.y + 51){
-      return false
-    }
-  }
-  return true
-}
+let impSprite
+let gameState = 'menu'
+let mainMenuButts
 
 function preload(){
-  //font = loadFont('upperercase.ttf')
-  img = loadImage('imp.png')
+  font = loadFont('upperercase.ttf')
+  impSprite = loadImage('imp.png')
 }
 
 function setup() {
@@ -353,6 +477,9 @@ function setup() {
   textAlign(CENTER)
   noStroke();
   rectMode(CENTER)
+  mainMenuButts = [
+    new menuButton(-512, -5, 200, 50, 'beginGame', [red, green], 0, 0, 'enter', purple)
+  ]
   cam = createCamera();
   uiCam = createCamera();
   setCamera(cam)
@@ -369,7 +496,7 @@ function setup() {
   grid = [
     new pathNode(-25, 250, [1], 'a'), new pathNode(450, 450, [0], 'b'), new pathNode(500, 800, [1], 'c')
   ]
-  objects = [new entity(500, 0, 500, img, 50, 175)]
+  objects = [new entity(500, 0, 500, impSprite, 50, 175)]
   player = new pc(100, 0, 400, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
@@ -379,136 +506,69 @@ function setup() {
   cam.eyeZ += player.z
   cam.cameraNear = 0
   uiCam.cameraNear = 0
-  console.log(uiCam)
+  uiCam.ortho()
+  textFont(font)
   noStroke()
-  //stroke(255)
   frameRate(30)
-  //texture(img)
-  //strokeWeight(1)
-  //textFont(font)
 }
 
 function draw() {
   background(0)
-  controls()
-  cam.pan(0)
-  cam.tilt(0)
+  switch (gameState){
+    case 'menu':
+      menuUI()
+      break
+    case 'game':
+      cam.pan(0)
+      cam.tilt(0)
+      player.controls()
 
-  for (let i of walls){
-    push()
-    fill(i.colour);
-    translate(i.midX, i.midY, i.midZ + 500)
-    rotateY(i.angle)
-    plane(i.width, i.height)
-    pop()
-    //line(i.x1, i.z1, i.x2, i.z2)
-  }
-  for (let i of floors){
-    push()
-    fill(i.colour)
-    translate(i.x, -i.y, i.z + 450)
-    rotateX(90)
-    rotateZ(i.rotation)
-    plane(i.width1, i.width2)
-    pop()
-  }
-  for (let i of grid){
-    circle(i.x, i.z, 10)
-  }
-  for (let i of objects){
-    i.render()
-  }
-  circle(player.x, player.z, 10)
-  if (jumping){
-    cam.centerY -= 2
-    cam.eyeY -= 2
-    player.y += 2
-    player.eyeLevel += 2
-    jumpHeight += 2
-    if (jumpHeight >= 50){
-      jumping = false
+      for (let i of walls){
+        push()
+        fill(i.colour);
+        translate(i.midX, i.midY, i.midZ + 500)
+        rotateY(i.angle)
+        plane(i.width, i.height)
+        pop()
+      }
+      for (let i of floors){
+        push()
+        fill(i.colour)
+        translate(i.x, -i.y, i.z + 450)
+        rotateX(90)
+        rotateZ(i.rotation)
+        plane(i.width1, i.width2)
+        pop()
+      }
+      for (let i of grid){
+        circle(i.x, i.z, 10)
+      }
+      for (let i of objects){
+        i.render()
+      }
+      circle(player.x, player.z, 10)
+      if (jumping){
+        cam.centerY -= 2
+        cam.eyeY -= 2
+        player.y += 2
+        player.eyeLevel += 2
+        jumpHeight += 2
+        if (jumpHeight >= 50){
+          jumping = false
+        }
+      }
+      else if (player.y > player.currentFloor.y){
+        player.y -= 2
+        cam.centerY += 2
+        cam.eyeY += 2
+        player.eyeLevel = player.y + player.height
+        if (player.y <= player.currentFloor.y){
+          jumpHeight = 0
+        }
+      }
+      ui()
+      break
     }
-  }
-  else if (player.y > player.currentFloor.y){
-    player.y -= 2
-    cam.centerY += 2
-    cam.eyeY += 2
-    player.eyeLevel = player.y + player.height
-    if (player.y <= player.currentFloor.y){
-      jumpHeight = 0
-    }
-  }
-  ui()
-}
-
-function controls(){
-  if (keyIsDown(87)){//w
-    if(moveCheck('fw')){
-      player.x += player.speed * sin(player.angleLR)
-      player.z -= player.speed * cos(player.angleLR)
-      cam.eyeX += player.speed * sin(player.angleLR)
-      cam.eyeZ -= player.speed * cos(player.angleLR)
-    }
-  }
-  if (keyIsDown(83)){//s
-    if(moveCheck('bw')){
-      player.x -= player.speed * sin(player.angleLR)
-      player.z += player.speed * cos(player.angleLR)
-      cam.eyeX -= player.speed * sin(player.angleLR)
-      cam.eyeZ += player.speed * cos(player.angleLR)
-    }
-  }
-  if (keyIsDown(65)){//a
-    if(moveCheck('lw')){
-      player.x -= player.speed * cos(player.angleLR)
-      player.z -= player.speed * sin(player.angleLR)
-      cam.eyeX -= player.speed * cos(player.angleLR)
-      cam.eyeZ -= player.speed * sin(player.angleLR)
-    }
-  }
-  if (keyIsDown(68)){//d
-    if(moveCheck('rw')){
-      player.x += player.speed * cos(player.angleLR)
-      player.z += player.speed * sin(player.angleLR)
-      cam.eyeX += player.speed * cos(player.angleLR)
-      cam.eyeZ += player.speed * sin(player.angleLR)
-    }
-  }
-  if (keyIsDown(37)){//left
-    player.angleLR -= 3
-    if (player.angleLR < 0){
-      player.angleLR += 360
-    }
-  }
-  if (keyIsDown(38)){//up
-    if (player.angleUD < 75){
-      player.angleUD += 1
-    }
-  }
-  if (keyIsDown(39)){//right key
-    player.angleLR += 3 // rotate right
-    if (player.angleLR > 360){
-      player.angleLR -= 360
-    }
-  }
-  if (keyIsDown(40)){//down key
-    if (player.angleUD > -45){ // limit angle
-      player.angleUD -= 1
-    }
-  }
-  cam.eyeY = -player.eyeLevel
-  // adjust view around player by trig values
-  cam.centerX = cam.eyeX + sin(player.angleLR)
-  cam.centerY = cam.eyeY - tan(player.angleUD)
-  cam.centerZ = cam.eyeZ - cos(player.angleLR)
-  if (keyIsDown(32) && jumpHeight == 0){//space
-    jumping = true
-  }
-  player.floorCheck()
-  if (player.y < player.currentFloor.y){
-    player.y += player.speed
-    player.eyeLevel = player.y + player.height
-  }
 }
 
 function ui(){
@@ -526,5 +586,18 @@ function ui(){
       line(-1, -1, 1, 1)
       line(1, -1, -1, 1)
     pop()
+  pop()
+}
+
+function menuUI(){
+  push()
+    setCamera(uiCam)
+    uiCam.setPosition(0, 0, 50)
+    for (let i of mainMenuButts){
+      i.render()
+      if (mouseIsPressed){
+        i.executeFunc()
+      }
+    }
   pop()
 }

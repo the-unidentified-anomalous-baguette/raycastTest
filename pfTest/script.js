@@ -220,17 +220,17 @@ function renderWorld(){
   for (let i of walls){
     line(i.x1, i.z1, i.x2, i.z2)
   }
-  for (let i of grid){
-    strokeWeight(2)
-    stroke(0, 255, 0)
-    fill(255)
-    for (let j of i.connectedNodes){
-      line(i.x, i.z, grid[j].x, grid[j].z)
-    }
-    circle(i.x, i.z, 10)
-    fill(0, 0, 255)
-    text(i.id, i.x, i.z)
-  }
+  // for (let i of grid){
+  //   strokeWeight(2)
+  //   stroke(0, 255, 0)
+  //   fill(255)
+  //   for (let j of i.connectedNodes){
+  //     line(i.x, i.z, grid[j].x, grid[j].z)
+  //   }
+  //   circle(i.x, i.z, 10)
+  //   fill(0, 0, 255)
+  //   text(i.id, i.x, i.z)
+  // }
   for (let ai1 of ais){
     strokeWeight(2)
     stroke(0, 255, 0)
