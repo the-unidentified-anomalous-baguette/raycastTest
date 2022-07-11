@@ -4,7 +4,7 @@ let stone = [128, 120, 133]
 let purple = [127, 0, 255]
 
 class menuButton{
-  constructor(x, y, w, h, func, spriteSheet, sW, sH, text, textColour){
+  constructor(x, y, w, h, func, spriteSheet, sW, sH){
     this.collX = x
     this.collY = y
     this.collW = x + w
@@ -17,14 +17,11 @@ class menuButton{
     this.spriteSheet = spriteSheet
     this.sW = sW
     this.sH = sH
-    this.text = text
-    this.textColour = textColour
   }
 
   checkHovered(){
-    let mousePosX = (mouseX - 512)*(52/512)
-    let mousePosY = (mouseY - 288)*(29/288)
-    console.log(mousePosX)
+    let mousePosX = mouseX - 512
+    let mousePosY = mouseY - 288
     if (mousePosX >= this.collX && mousePosX <= this.collW && mousePosY >= this.collY && mousePosY <= this.collH){
       return 1
     }
@@ -36,9 +33,6 @@ class menuButton{
       translate(this.transX, this.transY, 0)
       fill(this.spriteSheet[this.checkHovered()])
       rect(0, 0, this.w, this.h)
-      fill(this.textColour)
-      translate(0, this.h/2)
-      text(this.text, 0, 0)
     pop()
   }
 
@@ -47,6 +41,7 @@ class menuButton{
       switch (this.func){
         case 'beginGame':
           beginGame()
+          break
       }
     }
   }
@@ -245,7 +240,7 @@ class entity{
   }
   
   render(){
-    let spriteAngle = 8 - Math.floor((player.angleLR +22.5)/45)
+    let spriteAngle = Math.floor((360-player.angleLR + 22.5)/45)
     if (spriteAngle == 8){
       spriteAngle = 0
     }
@@ -263,20 +258,41 @@ class entity{
 }
 
 class ai extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, inventory, trackingMode){
+  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode){
     super(x, y, z, spriteSheet, collWidth, height)
     this.path = []
     this.goal = []
     this.speed = speed
     this.inventory = inventory
     this.trackingMode = trackingMode
+    this.angle = angle
+  }
+
+  render(){
+    let spriteAngle = Math.floor((this.angle - player.angleLR + 22.5 + 180)/45)
+    if (spriteAngle >= 8){
+      spriteAngle -= 8
+    }
+    else if (spriteAngle < 0){
+      spriteAngle += 8
+    }
+    push()
+    translate(this.x, this.midVert, this.z + 500)
+    rotateY(360 - player.angleLR)
+    image(this.spriteSheet,
+      -this.collWidth/2, -this.height/2,
+      this.collWidth, this.height,
+      0, (122 * spriteAngle) + 1,
+      84, 122
+      )
+    pop()
   }
 
   chooseGoal(){
     let foundGoal = false
     while (foundGoal == false){
       let nodes = []
-      this.goal = [random(50, 430), random(50, 350)]
+      this.goal = [player.x, player.z]
       // choose a random goal
       for (let i of grid){
         nodes.push([i, dist(i.x, i.z, this.goal[0], this.goal[1])])
@@ -388,6 +404,7 @@ class ai extends entity{
     if(asin(opp/hyp) >= 0){
       angle = acos(adj/hyp)
     } // calculate the angle between north and the position to move to
+    this.angle = angle
     if (hyp > this.speed){
       this.x -= sin(angle) * this.speed
       this.z += cos(angle) * this.speed
@@ -424,6 +441,30 @@ class ai extends entity{
       }
     }
   }
+
+  fullPathfinding(){
+    let finalNode
+    if (this.goal.length == 0){ // if the AI has no goal
+      finalNode = this.chooseGoal() 
+      // run goal finding algorithm (chooses goal and finds nearest node to it)
+      for (let i of walls){ // override for goal with unobstructed path
+        if (intersectCheck([this.x, this.z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){
+          break
+        }
+        else if (i == walls[walls.length - 1]){ 
+          // if no walls between AI and goal, skip pathfinding
+          this.path = [this.goal]
+        }
+      }
+      if (this.path.length == 0){ // pathFinding
+        this.path.push(this.findFirstNode()) // find first node
+        this.findPath(finalNode) // find path from there to goal's nearest node
+        this.path.push(this.goal) // add final goal to end of instructions
+      }
+    }
+    // if it has a path, follow it
+    this.followPath()
+  }
 }
 
 class staticNPC extends entity{
@@ -435,8 +476,8 @@ class staticNPC extends entity{
 }
 
 class movingNPC extends ai{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, menu, inventory, trackingMode){
-    super(x, y, z, spriteSheet, collWidth, height, speed, inventory, trackingMode)
+  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, menu, inventory, trackingMode){
+    super(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode)
     this.menu = menu
   }
 }
@@ -452,6 +493,36 @@ function beginGame(){
   gameState = 'game'
 }
 
+function sortFunction(a, b) {
+  if (a[1] === b[1]) {
+      return 0;
+  }
+  else {
+      return (a[1] < b[1]) ? -1 : 1;
+  }
+}
+
+function intersectCheck(l11, l12, l21, l22){
+  let x1 = l21[0]
+  let x2 = l22[0]
+  let z1 = l21[1]
+  let z2 = l22[1]
+
+  let x3 = l11[0]
+  let x4 = l12[0]
+  let z3 = l11[1]
+  let z4 = l12[1]
+
+  let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+  if (den == 0){return false}
+  let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+  let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1){
+    return true
+  } 
+  return false
+}
+
 let cam;
 let uiCam;
 let player;
@@ -465,6 +536,7 @@ let objects
 let impSprite
 let gameState = 'menu'
 let mainMenuButts
+let interactibles
 
 function preload(){
   font = loadFont('upperercase.ttf')
@@ -478,7 +550,7 @@ function setup() {
   noStroke();
   rectMode(CENTER)
   mainMenuButts = [
-    new menuButton(-512, -5, 200, 50, 'beginGame', [red, green], 0, 0, 'enter', purple)
+    new menuButton(-512, -5, 200, 50, 'beginGame', [red, green], 0, 0)
   ]
   cam = createCamera();
   uiCam = createCamera();
@@ -496,7 +568,7 @@ function setup() {
   grid = [
     new pathNode(-25, 250, [1], 'a'), new pathNode(450, 450, [0], 'b'), new pathNode(500, 800, [1], 'c')
   ]
-  objects = [new entity(500, 0, 500, impSprite, 50, 175)]
+  objects = [new ai(500, 0, 500, impSprite, 50, 175, 1, 0, 0, 0)]
   player = new pc(100, 0, 400, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
@@ -544,8 +616,13 @@ function draw() {
         circle(i.x, i.z, 10)
       }
       for (let i of objects){
+        i.fullPathfinding()
         i.render()
+        console.log(i.x, i.z)
       }
+      // for (let i of interactibles){
+
+      // }
       circle(player.x, player.z, 10)
       if (jumping){
         cam.centerY -= 2
@@ -578,9 +655,9 @@ function ui(){
     setCamera(uiCam) // switches cam
     uiCam.setPosition(0, 0, 50)
     push() // health bar
-      translate(0, 25, 0)
+      translate(0, 250, 0)
       fill(255, 0, 0)
-      rect(0, 0, 30, 3) // replace 50 with hp
+      rect(0, 0, 300, 30) // replace 50 with hp
     pop()
     push() // crosshair
       line(-1, -1, 1, 1)
