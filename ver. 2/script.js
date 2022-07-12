@@ -82,6 +82,9 @@ class pc{
     let z3 = this.z
     let x4
     let z4
+    let den
+    let t
+    let u
     if (dir == 'fw'){
       x4 = this.x + sin(this.angleLR) * this.speed
       z4 = this.z - cos(this.angleLR) * this.speed
@@ -104,9 +107,21 @@ class pc{
       let x2 = i.x2
       let z1 = i.z1
       let z2 = i.z2
-      let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-      let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-      let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      // let dz = i.z2 - i.z1
+      // let dx = i.x2 - i.x1
+      // x3 = x4 + dz
+      // z3 = z4 - dx
+      // den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      // t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      // u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      // if (t >= 0 && t <= 1 && u >= -1 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+      //   return false
+      // }
+      x3 = this.x
+      z3 = this.z
+      den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
       if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
         return false
       }
@@ -168,6 +183,9 @@ class pc{
       if (this.angleUD > -45){ // limit angle
         this.angleUD -= 1
       }
+    }
+    if (keyIsDown(27)){
+      gameState = 'pause'
     }
     cam.eyeY = -this.eyeLevel
     // adjust view around player by trig values
@@ -556,11 +574,11 @@ function setup() {
   uiCam = createCamera();
   setCamera(cam)
   walls = [
-    new boundary(0, 0, 0, 200, stone, 250, 0), new boundary(0, 200, 400, 400, stone, 250, 0), new boundary(400, 400, 600, 0, stone, 250, 0),
-    new boundary(600, 0, 700, 100, stone, 250, 0), new boundary(700, 100, 750, 500, stone, 250, 0), new boundary(750, 500, 600, 600, stone, 250, 0),
-    new boundary (600, 600, 600, 700, stone, 250, 0), new boundary(600, 700, 700, 750, stone, 250, 0), new boundary(700, 750, 750, 1000, stone, 250, 0),
-    new boundary(750, 1000, 400, 900, stone, 250, 0), new boundary(400, 900, 400, 500, stone, 250, 0), new boundary(400, 500, -50, 400, stone, 250, 0),
-    new boundary(-50, 400, -100, 0, stone, 250, 0), new boundary(-100, 0, 0, 0, stone, 250, 0)
+    new boundary(0, 0, 0, 400, stone, 250, 0), new boundary(0, 400, 800, 800, stone, 250, 0), new boundary(800, 800, 1200, 0, stone, 250, 0),
+    new boundary(1200, 0, 1400, 200, stone, 250, 0), new boundary(1400, 200, 1500, 1000, stone, 250, 0), new boundary(1500, 1000, 1200, 1200, stone, 250, 0),
+    new boundary(1200, 1200, 1200, 1400, stone, 250, 0), new boundary(1200, 1400, 1400, 1500, stone, 250, 0), new boundary(1400, 1500, 1500, 2000, stone, 250, 0),
+    new boundary(1500, 2000, 800, 1800, stone, 250, 0), new boundary(800, 1800, 800, 1000, stone, 250, 0), new boundary(800, 1000, -100, 800, stone, 250, 0),
+    new boundary(-100, 800, -200, 0, stone, 250, 0), new boundary(-200, 0, 0, 0, stone, 250, 0)
   ]
   floors = [
     new floor(900, 1000, 350, 0, 550, 0, red, {})
@@ -569,7 +587,7 @@ function setup() {
     new pathNode(-25, 250, [1], 'a'), new pathNode(450, 450, [0], 'b'), new pathNode(500, 800, [1], 'c')
   ]
   objects = [new ai(500, 0, 500, impSprite, 50, 175, 1, 0, 0, 0)]
-  player = new pc(100, 0, 400, 175, 0, 0, 4, floors[0])
+  player = new pc(3000, 0, 800, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -596,12 +614,21 @@ function draw() {
       player.controls()
 
       for (let i of walls){
+        stroke(20 * walls.indexOf(i), 0, 0)
+        strokeWeight(2)
         push()
         fill(i.colour);
         translate(i.midX, i.midY, i.midZ + 500)
         rotateY(i.angle)
         plane(i.width, i.height)
         pop()
+        if (i == walls[walls.length - 1]){
+          line(i.x1, i.z1, i.x2, i.z2)
+          let dz = i.z2-i.z1
+          let dx = i.x2-i.x1
+          line(player.x, player.z, player.x + dz, player.z - dx)
+          line(player.x, player.z, player.x - dz, player.z + dx)
+        }
       }
       for (let i of floors){
         push()
@@ -615,11 +642,10 @@ function draw() {
       for (let i of grid){
         circle(i.x, i.z, 10)
       }
-      for (let i of objects){
-        i.fullPathfinding()
-        i.render()
-        console.log(i.x, i.z)
-      }
+      // for (let i of objects){
+      //   i.fullPathfinding()
+      //   i.render()
+      // }
       // for (let i of interactibles){
 
       // }
@@ -645,6 +671,29 @@ function draw() {
       }
       ui()
       break
+    case 'pause':
+      for (let i of walls){
+        push()
+        fill(i.colour);
+        translate(i.midX, i.midY, i.midZ + 500)
+        rotateY(i.angle)
+        plane(i.width, i.height)
+        pop()
+      }
+      for (let i of floors){
+        push()
+        fill(i.colour)
+        translate(i.x, -i.y, i.z + 450)
+        rotateX(90)
+        rotateZ(i.rotation)
+        plane(i.width1, i.width2)
+        pop()
+      }
+      for (let i of objects){
+        i.render()
+      }
+      pauseUI()
+      break
     }
 }
 
@@ -660,13 +709,27 @@ function ui(){
       rect(0, 0, 300, 30) // replace 50 with hp
     pop()
     push() // crosshair
-      line(-1, -1, 1, 1)
-      line(1, -1, -1, 1)
+      strokeWeight(1)
+      line(-10, -10, 10, 10)
+      line(10, -10, -10, 10)
     pop()
   pop()
 }
 
 function menuUI(){
+  push()
+    setCamera(uiCam)
+    uiCam.setPosition(0, 0, 50)
+    for (let i of mainMenuButts){
+      i.render()
+      if (mouseIsPressed){
+        i.executeFunc()
+      }
+    }
+  pop()
+}
+
+function pauseUI(){
   push()
     setCamera(uiCam)
     uiCam.setPosition(0, 0, 50)
