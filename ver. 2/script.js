@@ -103,20 +103,36 @@ class pc{
     }
   
     for (let i of walls){
+      for (let j of walls){
+        let x1 = j.x1
+        let x2 = j.x2
+        let z1 = j.z1
+        let z2 = j.z2
+        let dz = i.z2 - i.z1
+        dz *= 75/i.width
+        let dx = i.x2 - i.x1
+        dx *= 75/i.width
+        x3 = x4 + dz
+        z3 = z4 - dx
+        den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+        t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+        u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+          return false
+        }
+        x3 = x4 - dz
+        z3 = z4 + dx
+        den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+        t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+        u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+          return false
+        }
+      }
       let x1 = i.x1
       let x2 = i.x2
       let z1 = i.z1
       let z2 = i.z2
-      // let dz = i.z2 - i.z1
-      // let dx = i.x2 - i.x1
-      // x3 = x4 + dz
-      // z3 = z4 - dx
-      // den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-      // t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-      // u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-      // if (t >= 0 && t <= 1 && u >= -1 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
-      //   return false
-      // }
       x3 = this.x
       z3 = this.z
       den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
@@ -584,10 +600,10 @@ function setup() {
     new floor(900, 1000, 350, 0, 550, 0, red, {})
   ]
   grid = [
-    new pathNode(-25, 250, [1], 'a'), new pathNode(450, 450, [0], 'b'), new pathNode(500, 800, [1], 'c')
+    new pathNode(-100, 500, [1], 'a'), new pathNode(900, 900, [0, 2], 'b'), new pathNode(1000, 1600, [1], 'c')
   ]
-  objects = [new ai(500, 0, 500, impSprite, 50, 175, 1, 0, 0, 0)]
-  player = new pc(3000, 0, 800, 175, 0, 0, 4, floors[0])
+  objects = [new ai(1000, 0, 1000, impSprite, 50, 175, 1, 0, 0, 0)]
+  player = new pc(400, 0, 800, 175, 0, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -614,7 +630,7 @@ function draw() {
       player.controls()
 
       for (let i of walls){
-        stroke(20 * walls.indexOf(i), 0, 0)
+        stroke(255, 0, 0)
         strokeWeight(2)
         push()
         fill(i.colour);
@@ -622,13 +638,6 @@ function draw() {
         rotateY(i.angle)
         plane(i.width, i.height)
         pop()
-        if (i == walls[walls.length - 1]){
-          line(i.x1, i.z1, i.x2, i.z2)
-          let dz = i.z2-i.z1
-          let dx = i.x2-i.x1
-          line(player.x, player.z, player.x + dz, player.z - dx)
-          line(player.x, player.z, player.x - dz, player.z + dx)
-        }
       }
       for (let i of floors){
         push()
@@ -640,16 +649,16 @@ function draw() {
         pop()
       }
       for (let i of grid){
-        circle(i.x, i.z, 10)
+        circle(i.x, i.z, 20)
       }
-      // for (let i of objects){
-      //   i.fullPathfinding()
-      //   i.render()
-      // }
+      for (let i of objects){
+        i.fullPathfinding()
+        i.render()
+      }
       // for (let i of interactibles){
 
       // }
-      circle(player.x, player.z, 10)
+      //circle(player.x, player.z, 140)
       if (jumping){
         cam.centerY -= 2
         cam.eyeY -= 2
