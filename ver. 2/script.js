@@ -73,6 +73,9 @@ class pc{
           // checking if player is on the tile
           player.currentFloor = i // sets the floor the player stands on
         }
+        else {
+          player.currentFloor = floors[0]
+        }
       }
     }
   }
@@ -103,44 +106,42 @@ class pc{
     }
   
     for (let i of walls){
-      for (let j of walls){
-        let x1 = j.x1
-        let x2 = j.x2
-        let z1 = j.z1
-        let z2 = j.z2
-        let dz = i.z2 - i.z1
-        dz *= 75/i.width
-        let dx = i.x2 - i.x1
-        dx *= 75/i.width
-        x3 = x4 + dz
-        z3 = z4 - dx
-        den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-        t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-        u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
-          return false
-        }
-        x3 = x4 - dz
-        z3 = z4 + dx
-        den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-        t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-        u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
-          return false
-        }
-      }
       let x1 = i.x1
       let x2 = i.x2
       let z1 = i.z1
       let z2 = i.z2
-      x3 = this.x
-      z3 = this.z
+      let dz = i.z2 - i.z1
+      dz *= 75/i.width
+      let dx = i.x2 - i.x1
+      dx *= 75/i.width
+      x3 = x4 + dz
+      z3 = z4 - dx
       den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
       t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
       u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
       if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
         return false
       }
+      x3 = x4 - dz
+      z3 = z4 + dx
+      den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+        return false
+      }
+      // x1 = i.x1
+      // x2 = i.x2
+      // z1 = i.z1
+      // z2 = i.z2
+      // x3 = this.x
+      // z3 = this.z
+      // den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      // t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      // u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      // if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+      //   return false
+      // }
     }
     return true
   }
@@ -217,6 +218,10 @@ class pc{
       this.eyeLevel = this.y + this.height
     }
   }
+
+  interactCheck(){
+
+  }
 }
 
 class boundary{
@@ -234,6 +239,18 @@ class boundary{
     this.z2=z2
     this.base = base
   }
+
+  render(){
+    push()
+    texture(brick)
+    // strokeWeight(2)
+    // stroke(255, 0, 0)
+    // fill(this.colour);
+    translate(this.midX, this.midY, this.midZ + 500)
+    rotateY(this.angle)
+    plane(this.width, this.height)
+    pop()
+  }
 }
 
 class floor{
@@ -250,6 +267,19 @@ class floor{
     this.unrotZ1 = -width2/2
     this.unrotZ2 = width2/2
     this.catchZone = catchZone
+  }
+
+  render(){
+    push()
+    texture(brick)
+    // strokeWeight(2)
+    // stroke(0, 255, 0)
+    // fill(this.colour)
+    translate(this.x, -this.y, this.z + 450)
+    rotateX(90)
+    rotateZ(this.rotation)
+    plane(this.width1, this.width2)
+    pop()
   }
 }
 
@@ -568,6 +598,7 @@ let font
 let grid
 let objects
 let impSprite
+let brick
 let gameState = 'menu'
 let mainMenuButts
 let interactibles
@@ -575,6 +606,7 @@ let interactibles
 function preload(){
   font = loadFont('upperercase.ttf')
   impSprite = loadImage('imp.png')
+  brick = loadImage('brickTemp.png')
 }
 
 function setup() {
@@ -590,20 +622,23 @@ function setup() {
   uiCam = createCamera();
   setCamera(cam)
   walls = [
-    new boundary(0, 0, 0, 400, stone, 250, 0), new boundary(0, 400, 800, 800, stone, 250, 0), new boundary(800, 800, 1200, 0, stone, 250, 0),
-    new boundary(1200, 0, 1400, 200, stone, 250, 0), new boundary(1400, 200, 1500, 1000, stone, 250, 0), new boundary(1500, 1000, 1200, 1200, stone, 250, 0),
-    new boundary(1200, 1200, 1200, 1400, stone, 250, 0), new boundary(1200, 1400, 1400, 1500, stone, 250, 0), new boundary(1400, 1500, 1500, 2000, stone, 250, 0),
+    new boundary(0, 0, 0, 400, stone, 500, 0), new boundary(0, 400, 800, 800, stone, 500, 0), new boundary(800, 800, 1200, 0, stone, 500, 0),
+    new boundary(1200, 0, 1400, 200, stone, 500, 0), new boundary(1400, 200, 1500, 1000, stone, 500, 0), new boundary(1500, 1000, 1200, 1200, stone, 500, 0),
+    new boundary(1200, 1200, 1200, 1400, stone, 500, 0), new boundary(1200, 1400, 1400, 1500, stone, 500, 0), new boundary(1400, 1500, 1500, 2000, stone, 50, 0),
     new boundary(1500, 2000, 800, 1800, stone, 250, 0), new boundary(800, 1800, 800, 1000, stone, 250, 0), new boundary(800, 1000, -100, 800, stone, 250, 0),
     new boundary(-100, 800, -200, 0, stone, 250, 0), new boundary(-200, 0, 0, 0, stone, 250, 0)
   ]
+  console.log(walls[8])
   floors = [
-    new floor(900, 1000, 350, 0, 550, 0, red, {})
+    new floor(1000, 1000, 300, 0, 550, 0, red, {}),
+    //new floor(700, 2000, 1150, 0, 1050, 0, red, {}),
+    new floor(509.9019513592785, 100, 1450 + 50*sin(78.69006752597979), 50, 1740 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, red, {})
   ]
   grid = [
     new pathNode(-100, 500, [1], 'a'), new pathNode(900, 900, [0, 2], 'b'), new pathNode(1000, 1600, [1], 'c')
   ]
   objects = [new ai(1000, 0, 1000, impSprite, 50, 175, 1, 0, 0, 0)]
-  player = new pc(400, 0, 800, 175, 0, 0, 4, floors[0])
+  player = new pc(1200, 0, 1500, 175, 90, 0, 4, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -630,29 +665,13 @@ function draw() {
       player.controls()
 
       for (let i of walls){
-        stroke(255, 0, 0)
-        strokeWeight(2)
-        push()
-        fill(i.colour);
-        translate(i.midX, i.midY, i.midZ + 500)
-        rotateY(i.angle)
-        plane(i.width, i.height)
-        pop()
+        i.render()
       }
       for (let i of floors){
-        push()
-        fill(i.colour)
-        translate(i.x, -i.y, i.z + 450)
-        rotateX(90)
-        rotateZ(i.rotation)
-        plane(i.width1, i.width2)
-        pop()
-      }
-      for (let i of grid){
-        circle(i.x, i.z, 20)
+        i.render()
       }
       for (let i of objects){
-        i.fullPathfinding()
+        //i.fullPathfinding()
         i.render()
       }
       // for (let i of interactibles){
@@ -682,21 +701,10 @@ function draw() {
       break
     case 'pause':
       for (let i of walls){
-        push()
-        fill(i.colour);
-        translate(i.midX, i.midY, i.midZ + 500)
-        rotateY(i.angle)
-        plane(i.width, i.height)
-        pop()
+        i.render()
       }
       for (let i of floors){
-        push()
-        fill(i.colour)
-        translate(i.x, -i.y, i.z + 450)
-        rotateX(90)
-        rotateZ(i.rotation)
-        plane(i.width1, i.width2)
-        pop()
+        i.render()
       }
       for (let i of objects){
         i.render()
