@@ -103,36 +103,30 @@ class pc{
     }
   
     for (let i of walls){
-      for (let j of walls){
-        let x1 = j.x1
-        let x2 = j.x2
-        let z1 = j.z1
-        let z2 = j.z2
-        let dz = i.z2 - i.z1
-        dz *= 75/i.width
-        let dx = i.x2 - i.x1
-        dx *= 75/i.width
-        x3 = x4 + dz
-        z3 = z4 - dx
-        den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-        t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-        u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
-          return false
-        }
-        x3 = x4 - dz
-        z3 = z4 + dx
-        den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-        t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-        u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
-          return false
-        }
-      }
       let x1 = i.x1
       let x2 = i.x2
       let z1 = i.z1
       let z2 = i.z2
+      let dz = i.z2 - i.z1
+      dz *= 75/i.width
+      let dx = i.x2 - i.x1
+      dx *= 75/i.width
+      x3 = x4 + dz
+      z3 = z4 - dx
+      den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+        return false
+      }
+      x3 = x4 - dz
+      z3 = z4 + dx
+      den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+      t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+      u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
+        return false
+      }
       x3 = this.x
       z3 = this.z
       den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
