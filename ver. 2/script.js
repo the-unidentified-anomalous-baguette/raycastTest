@@ -197,6 +197,12 @@ class pc{
       }
     }
     this.angleLR += movedX
+    if (this.angleLR > 360){
+      this.angleLR -= 360
+    }
+    else if (this.angleLR < 0){
+      this.angleLR += 360
+    }
     if (this.angleUD <= 75 && this.angleUD >= -45){
       this.angleUD -= movedY
       if (this.angleUD > 75){
@@ -698,7 +704,7 @@ function draw() {
         i.render()
       }
       for (let i of objects){
-        i.fullPathfinding()
+        //i.fullPathfinding()
         i.render()
       }
       // for (let i of interactibles){
@@ -753,8 +759,11 @@ function ui(){
     line(-10, -10, 10, 10)
     line(10, -10, -10, 10)
     if (player.interactCheck()){
+      fill(30, 30, 30, 170)
+      rect(0, 0, 800, 400)
+      fill(red)
       textSize(50)
-      text('aaaaaaaaaaa bbbbbbb ccccccccccccc d eeeee', 0, 0, 100, 100)
+      text('this is an interaction menu', 0, 0, 200)
     }
   pop()
 }
