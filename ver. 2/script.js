@@ -303,7 +303,7 @@ class floor{
   render(){
     push()
     texture(brick)
-    translate(this.x, -this.y, this.z + 450)
+    translate(this.x, -this.y, this.z + 500)
     rotateX(90)
     rotateZ(this.rotation)
     plane(this.width1, this.width2)
@@ -328,7 +328,7 @@ class entity{
     this.spriteSheet = spriteSheet
     this.collWidth = collWidth
     this.height = height
-    this.midVert = - (y + height)/2
+    this.midVert = - (y + (height/2))
   }
   
   render(){
@@ -350,7 +350,7 @@ class entity{
 }
 
 class ai extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode){
+  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode, hp){
     super(x, y, z, spriteSheet, collWidth, height)
     this.path = []
     this.goal = []
@@ -358,6 +358,7 @@ class ai extends entity{
     this.inventory = inventory
     this.trackingMode = trackingMode
     this.angle = angle
+    this.hp = hp
   }
 
   render(){
@@ -532,6 +533,7 @@ class ai extends entity{
         this.path = []
       }
     }
+    this.floorCheck()
   }
 
   fullPathfinding(){
@@ -560,19 +562,38 @@ class ai extends entity{
     // if it has a path, follow it
     this.followPath()
   }
+
+  floorCheck(){
+    for (let i of floors){ // check every floor tile
+      if (this.y >= i.y - i.catchZone){
+        let relX = this.x - i.x
+        let relZ = this.z - i.z
+        let rottedX = (relX * cos(i.rotation)) + (relZ * sin(i.rotation))
+        // player coords rotated to align with the tested floor tile
+        let rottedZ = -(relX * sin(i.rotation)) + (relZ * cos(i.rotation))
+        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2
+          && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){
+          // checking if player is on the tile
+          this.y = i.y // sets the floor the player stands on
+          this.midVert = - (this.y + (this.height/2))
+        }
+      }
+    }
+  }
 }
 
 class staticNPC extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, menu, inventory){
+  constructor(x, y, z, spriteSheet, collWidth, height, menu, inventory, hp){
     super(x, y, z, spriteSheet, collWidth, height)
     this.menu = menu
     this.inventory = inventory
+    this.hp = hp
   }
 }
 
 class movingNPC extends ai{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, menu, inventory, trackingMode){
-    super(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode)
+  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, menu, inventory, trackingMode, hp){
+    super(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode, hp)
     this.menu = menu
   }
 }
@@ -637,7 +658,7 @@ let mainMenuButts
 let interactibles
 
 function preload(){
-  font = loadFont('upperercase.ttf')
+  font = loadFont('COMIC.ttf')
   impSprite = loadImage('imp.png')
   brick = loadImage('brickTemp.png')
   tallWall = loadImage('tallWall.png')
@@ -646,7 +667,7 @@ function preload(){
 function setup() {
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
-  textAlign(CENTER)
+  textAlign(CENTER, CENTER)
   noStroke();
   rectMode(CENTER)
   mainMenuButts = [
@@ -661,17 +682,19 @@ function setup() {
     new boundary(1200, 1200, 1200, 1400, stone, 500, 0), new boundary(1200, 1400, 1400, 1500, stone, 500, 0), new boundary(1400, 1500, 1500, 2000, stone, 50, 0),
     new boundary(1500, 2000, 800, 1800, stone, 250, 0), new boundary(800, 1800, 800, 1000, stone, 250, 0), new boundary(800, 1000, -100, 800, stone, 250, 0),
     new boundary(-100, 800, -200, 0, stone, 250, 0), new boundary(-200, 0, 50, 0, stone, 250, 0), new boundary(1400, 1500, 1700, 1450, stone, 500, 0), 
-    new boundary(1700, 1450, 1700, 2000, stone, 500, 0), new boundary(1700, 2000, 1500, 2000, stone, 500, 0)
+    new boundary(1700, 1450, 1600, 2000, stone, 500, 0), new boundary(1600, 2000, 1500, 2000, stone, 500, 0), new boundary(1500, 1450, 1500, 1650, red, 100, 0), 
+    new boundary(1500, 1650, 1700, 1650, red, 100, 0)
   ]
   floors = [
-    new floor(1000, 1000, 300, 0, 550, 0, red, {}),
-    new floor(700, 2000, 1150, 0, 1050, 0, red, {}),
-    new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1700 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, red, {})
+    new floor(1000, 1000, 300, 0, 500, 0, red, {}),
+    new floor(700, 2000, 1150, 0, 1000, 0, red, {}),
+    new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, red, {}),
+    new floor(200, 200, 1600, 100, 1550, 0, red, {})
   ]
   grid = [
     new pathNode(-100, 500, [1], 'a'), new pathNode(900, 900, [0, 2], 'b'), new pathNode(1000, 1600, [1], 'c')
   ]
-  objects = [new ai(1000, 0, 1000, impSprite, 50, 175, 2, 0, 0, 0)]
+  objects = [new ai(1000, 0, 1000, impSprite, 50, 175, 2, 0, 0, 0, 10)]
   player = new pc(1200, 0, 1500, 175, 90, 0, 8, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
@@ -704,30 +727,37 @@ function draw() {
         i.render()
       }
       for (let i of objects){
-        //i.fullPathfinding()
+        // i.fullPathfinding()
         i.render()
+        if (i.hp <= 0){
+          objects.shift(objects[objects.indexOf(i)])
+        }
       }
       // for (let i of interactibles){
 
       // }
       //circle(player.x, player.z, 140)
       if (jumping){
-        cam.centerY -= 2
-        cam.eyeY -= 2
-        player.y += 2
-        player.eyeLevel += 2
-        jumpHeight += 2
+        cam.centerY -= 3
+        cam.eyeY -= 3
+        player.y += 3
+        player.eyeLevel += 3
+        jumpHeight += 3
         if (jumpHeight >= 50){
           jumping = false
         }
       }
       else if (player.y > player.currentFloor.y){
-        player.y -= 2.5
-        cam.centerY += 2.5
-        cam.eyeY += 2.5
+        player.y -= 3
+        cam.centerY += 3
+        cam.eyeY += 3
         player.eyeLevel = player.y + player.height
         if (player.y <= player.currentFloor.y){
           jumpHeight = 0
+          player.y = player.currentFloor.y 
+          player.eyeLevel = player.y + player.height
+          cam.eyeY = -player.eyeLevel
+          cam.
         }
       }
       ui()
@@ -759,11 +789,21 @@ function ui(){
     line(-10, -10, 10, 10)
     line(10, -10, -10, 10)
     if (player.interactCheck()){
-      fill(30, 30, 30, 170)
-      rect(0, 0, 800, 400)
-      fill(red)
-      textSize(50)
-      text('this is an interaction menu', 0, 0, 200)
+      if (keyIsDown(69)){
+        fill(30, 30, 30, 170)
+        rect(0, 0, 800, 400)
+        fill(red)
+        textSize(50)
+        text('this is an interaction menu', 0, 0, 200)
+      }
+      else {
+        textSize(50)
+        fill(red)
+        text('(e) interact', 0, 0)
+      }
+      if (keyIsDown(88)){
+        objects[0].hp -= 1
+      }
     }
   pop()
 }
