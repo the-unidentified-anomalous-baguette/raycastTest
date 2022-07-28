@@ -175,28 +175,22 @@ class pc{
       }
     }
     if (keyIsDown(37)){//left
-      this.angleLR -= 3
-      if (this.angleLR < 0){
-        this.angleLR += 360
-      }
+      this.angleLR -= 3 * (30/frameRate())
     }
     if (keyIsDown(38)){//up
       if (this.angleUD < 75){
-        this.angleUD += 1
+        this.angleUD += 1 * (30/frameRate())
       }
     }
     if (keyIsDown(39)){//right key
-      this.angleLR += 3 // rotate right
-      if (this.angleLR > 360){
-        this.angleLR -= 360
-      }
+      this.angleLR += 3 * (30/frameRate())// rotate right
     }
     if (keyIsDown(40)){//down key
       if (this.angleUD > -45){ // limit angle
-        this.angleUD -= 1
+        this.angleUD -= 1 * (30/frameRate())
       }
     }
-    this.angleLR += movedX
+    this.angleLR += movedX  * (30/frameRate())
     if (this.angleLR > 360){
       this.angleLR -= 360
     }
@@ -204,7 +198,7 @@ class pc{
       this.angleLR += 360
     }
     if (this.angleUD <= 75 && this.angleUD >= -45){
-      this.angleUD -= movedY
+      this.angleUD -= movedY * (30/frameRate())
       if (this.angleUD > 75){
         this.angleUD = 75
       }
@@ -329,40 +323,12 @@ class entity{
     this.collWidth = collWidth
     this.height = height
     this.midVert = - (y + (height/2))
+    this.angle = 0
   }
   
   render(){
-    let spriteAngle = Math.floor((360-player.angleLR + 22.5)/45)
-    if (spriteAngle == 8){
-      spriteAngle = 0
-    }
-    push()
-    translate(this.x, this.midVert, this.z + 500)
-    rotateY(360 - player.angleLR)
-    image(this.spriteSheet,
-      -this.collWidth/2, -this.height/2,
-      this.collWidth, this.height,
-      0, (122 * spriteAngle) + 1,
-      84, 122
-      )
-    pop()
-  }
-}
-
-class ai extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode, hp){
-    super(x, y, z, spriteSheet, collWidth, height)
-    this.path = []
-    this.goal = []
-    this.speed = speed
-    this.inventory = inventory
-    this.trackingMode = trackingMode
-    this.angle = angle
-    this.hp = hp
-  }
-
-  render(){
     let spriteAngle = Math.floor((this.angle - player.angleLR + 22.5 + 180)/45)
+    this.midVert = - (this.y + (this.height/2))
     if (spriteAngle >= 8){
       spriteAngle -= 8
     }
@@ -379,6 +345,21 @@ class ai extends entity{
       84, 122
       )
     pop()
+  }
+}
+
+class ai{
+  constructor(x, y, z, angle, speed, hp, linkedNtt, mode){
+    this.x = x
+    this.y = y
+    this.z = z
+    this.angle = angle
+    this.speed = speed
+    this.hp = hp
+    this.linkedNtt = linkedNtt
+    this.mode = mode
+    this.path = []
+    this.goal = []
   }
 
   chooseGoal(){
@@ -507,6 +488,16 @@ class ai extends entity{
       this.z += cos(angle) * hyp
     } // move directly onto it if close enough
     let pathLength = this.path.length
+    for (let i of walls){
+      // checks for shortcut
+      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2])){
+        break
+      }
+      else if (i == walls[walls.length - 1]){
+        this.path = [[player.x, player.z]]
+        this.goal = [player.x, player.z]
+      }
+    }
     for (let j = this.path.length - 1; j >= 0; j -= 1){
       for (let i of walls){
         // checks for shortcut
@@ -534,33 +525,75 @@ class ai extends entity{
       }
     }
     this.floorCheck()
+    objects[this.linkedNtt].x = this.x
+    objects[this.linkedNtt].y = this.y
+    objects[this.linkedNtt].z = this.z
+    objects[this.linkedNtt].angle = this.angle
+  }
+
+  meleeCheck(){
+    let hyp = dist(this.x, this.z, player.x, player.z)
+    if (hyp <= meleeMax && hyp >= meleeMin){
+      for (let i of walls){
+        // checks for shortcut
+        if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2])){
+          this.mode = 'h'
+          break;
+        }
+        else if (i == walls[walls.length - 1]){
+          // if no walls between AI and player, enter melee
+          this.path = []
+          this.goal = []
+          this.mode = 'm'
+          let opp = this.x - player.x
+          let adj = player.z - this.z
+          let angle
+          if (asin(opp/hyp) <= 0){
+            angle = 360-acos(adj/hyp)
+          }
+          if(asin(opp/hyp) >= 0){
+            angle = acos(adj/hyp)
+          } // calculate the angle between north and the position to move to
+          this.angle = angle
+        }
+      }
+    }
+    else {
+      this.mode = 'h'
+    }
   }
 
   fullPathfinding(){
-    let finalNode
-    if (this.goal.length == 0){ // if the AI has no goal
-      finalNode = this.chooseGoal()
-      console.log('found player and last node')
-      // run goal finding algorithm (chooses goal and finds nearest node to it)
-      for (let i of walls){ // override for goal with unobstructed path
-        if (intersectCheck([this.x, this.z], this.goal, [i.x1, i.z1], [i.x2, i.z2]) && i.base <= this.y + this.height && i.base + i.height >= this.y + 51){
-          console.log('cannot stright path')
-          break
+    switch (this.mode){
+      case 'h':
+        let finalNode
+        if (this.goal.length == 0){ // if the AI has no goal
+          finalNode = this.chooseGoal()
+          // run goal finding algorithm (chooses goal and finds nearest node to it)
+          for (let i of walls){ // override for goal with unobstructed path
+            if (intersectCheck([this.x, this.z], this.goal, [i.x1, i.z1], [i.x2, i.z2]) && i.base <= this.y + this.height && i.base + i.height >= this.y + 51){
+              break
+            }
+            else if (i == walls[walls.length - 1]){
+              // if no walls between AI and goal, skip pathfinding
+              this.path = [this.goal]
+            }
+          }
+          if (this.path.length == 0){ // pathFinding
+            this.path.push(this.findFirstNode()) // find first node
+            this.findPath(finalNode) // find path from there to goal's nearest node
+            this.path.push(this.goal) // add final goal to end of instructions
+          }
         }
-        else if (i == walls[walls.length - 1]){ 
-          console.log('straight path found')
-          // if no walls between AI and goal, skip pathfinding
-          this.path = [this.goal]
-        }
-      }
-      if (this.path.length == 0){ // pathFinding
-        this.path.push(this.findFirstNode()) // find first node
-        this.findPath(finalNode) // find path from there to goal's nearest node
-        this.path.push(this.goal) // add final goal to end of instructions
-      }
+        // if it has a path, follow it
+        this.followPath()
+        break;
+      case 'm':
+        console.log('doing melee')
+        break;
     }
-    // if it has a path, follow it
-    this.followPath()
+    this.meleeCheck()
+    objects[this.linkedNtt].angle = this.angle
   }
 
   floorCheck(){
@@ -579,29 +612,6 @@ class ai extends entity{
         }
       }
     }
-  }
-}
-
-class staticNPC extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, menu, inventory, hp){
-    super(x, y, z, spriteSheet, collWidth, height)
-    this.menu = menu
-    this.inventory = inventory
-    this.hp = hp
-  }
-}
-
-class movingNPC extends ai{
-  constructor(x, y, z, spriteSheet, collWidth, height, speed, angle, menu, inventory, trackingMode, hp){
-    super(x, y, z, spriteSheet, collWidth, height, speed, angle, inventory, trackingMode, hp)
-    this.menu = menu
-  }
-}
-
-class container extends entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, inventory){
-    super(x, y, z, spriteSheet, collWidth, height)
-    this.inventory = inventory
   }
 }
 
@@ -655,7 +665,9 @@ let brick
 let tallWall
 let gameState = 'menu'
 let mainMenuButts
-let interactibles
+let ais
+let meleeMin = 75
+let meleeMax = 150
 
 function preload(){
   font = loadFont('COMIC.ttf')
@@ -676,25 +688,30 @@ function setup() {
   cam = createCamera();
   uiCam = createCamera();
   setCamera(cam)
-  walls = [
-    new boundary(50, 0, 50, 400, stone, 500, 0), new boundary(50, 400, 800, 800, stone, 500, 0), new boundary(800, 800, 1200, 0, stone, 500, 0),
-    new boundary(1200, 0, 1400, 200, stone, 500, 0), new boundary(1400, 200, 1500, 1000, stone, 500, 0), new boundary(1500, 1000, 1200, 1200, stone, 500, 0),
-    new boundary(1200, 1200, 1200, 1400, stone, 500, 0), new boundary(1200, 1400, 1400, 1500, stone, 500, 0), new boundary(1400, 1500, 1500, 2000, stone, 50, 0),
-    new boundary(1500, 2000, 800, 1800, stone, 250, 0), new boundary(800, 1800, 800, 1000, stone, 250, 0), new boundary(800, 1000, -100, 800, stone, 250, 0),
-    new boundary(-100, 800, -200, 0, stone, 250, 0), new boundary(-200, 0, 50, 0, stone, 250, 0), new boundary(1400, 1500, 1700, 1450, stone, 500, 0), 
-    new boundary(1700, 1450, 1600, 2000, stone, 500, 0), new boundary(1600, 2000, 1500, 2000, stone, 500, 0), new boundary(1500, 1450, 1500, 1650, red, 100, 0), 
-    new boundary(1500, 1650, 1700, 1650, red, 100, 0)
-  ]
   floors = [
     new floor(1000, 1000, 300, 0, 500, 0, red, {}),
     new floor(700, 2000, 1150, 0, 1000, 0, red, {}),
-    new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, red, {}),
-    new floor(200, 200, 1600, 100, 1550, 0, red, {})
+    // new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, red, {}),
+    // new floor(200, 200, 1600, 100, 1550, 0, red, {}),
+    // new floor(1000, 1000, 300, 250, 500, 0, red, {})
   ]
   grid = [
-    new pathNode(-100, 500, [1], 'a'), new pathNode(900, 900, [0, 2], 'b'), new pathNode(1000, 1600, [1], 'c')
+    new pathNode(1000, 1000, [1, 2, 3], 'a'), new pathNode(2000, 800, [0], 'b'), 
+    new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
+    new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
+    new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
   ]
-  objects = [new ai(1000, 0, 1000, impSprite, 50, 175, 2, 0, 0, 0, 10)]
+  walls = [
+    new boundary(500, 500, 2500, 500, stone, 250, 0), new boundary(2500, 500, 2500, 1000, stone, 250, 0), new boundary(2500, 1000, 1500, 1250, stone, 250, 0),
+    new boundary(2500, 1000, 3000, 900, stone, 250, 0), new boundary(3000, 2000, 2500, 2500, stone, 250, 0), new boundary(2000, 2500, 800, 2200, stone, 250, 0), new boundary(800, 2200, 500, 500, stone, 250, 0),
+    new boundary(2500, 2500, 2500, 3000, stone, 250, 0), new boundary(2500, 3000, 3000, 3250, stone, 250, 0), new boundary(3000, 3250, 2500, 3500, stone, 250, 0), new boundary(2500, 3500, 2000, 3400, stone, 250, 0),
+    new boundary(2000, 3400, 800, 2200, stone, 250, 0), new boundary(1500, 1250, 1800, 1400, stone, 250, 0), new boundary(1800, 1400, 2000, 1125, stone, 250, 0), new boundary(3000, 2000, 2800, 1500, stone, 250, 0),
+    new boundary(2800, 1500, 3500, 1900, stone, 250, 0), new boundary(3500, 1900, 3100, 2050, stone, 250, 0), new boundary(3100, 2050, 3400, 2500, stone, 250, 0), new boundary(3400, 2500, 4000, 2500, stone, 250, 0),
+    new boundary(4000, 2500, 4300, 2100, stone, 250, 0), new boundary(4300, 2100, 3900, 1600, stone, 250, 0), new boundary(3900, 1600, 3650, 1600, stone, 250, 0), new boundary(3650, 1600, 3700, 1000, stone, 250, 0),
+    new boundary(3700, 1000, 3000, 900, stone, 250, 0), new boundary(3700, 1000, 3000, 1200, stone, 250, 0)
+  ]
+  objects = [new entity(1000, 0, 1000, impSprite, 50, 175, 0),new entity(5000, 0, 1000, impSprite, 50, 175, 0), new entity(1000, 0, 5000, impSprite, 50, 175, 0)]
+  AIs = [new ai(1000, 0, 1000, 0, 4, 50, 0, 'h'), new ai(5000, 0, 1000, 0, 4, 50, 1, 'h'), new ai(1000, 0, 5000, 0, 4, 50, 2, 'h')]
   player = new pc(1200, 0, 1500, 175, 90, 0, 8, floors[0])
   cam.centerX += player.x
   cam.eyeX += player.x
@@ -702,7 +719,6 @@ function setup() {
   cam.eyeY -= 17
   cam.centerZ += player.z
   cam.eyeZ += player.z
-  console.log(cam)
   uiCam.ortho()
   textFont(font)
   noStroke()
@@ -710,6 +726,7 @@ function setup() {
 }
 
 function draw() {
+  player.speed = 8 * (30/frameRate())
   background(0)
   switch (gameState){
     case 'menu':
@@ -726,38 +743,33 @@ function draw() {
       for (let i of floors){
         i.render()
       }
-      for (let i of objects){
-        // i.fullPathfinding()
-        i.render()
-        if (i.hp <= 0){
-          objects.shift(objects[objects.indexOf(i)])
-        }
+      for (let i of AIs){
+        i.fullPathfinding()
       }
-      // for (let i of interactibles){
-
-      // }
-      //circle(player.x, player.z, 140)
+      for (let i of objects){
+        i.render()
+      }
       if (jumping){
-        cam.centerY -= 3
-        cam.eyeY -= 3
-        player.y += 3
-        player.eyeLevel += 3
-        jumpHeight += 3
+        cam.centerY -= 3 * (30/frameRate())
+        cam.eyeY -= 3 * (30/frameRate())
+        player.y += 3 * (30/frameRate())
+        player.eyeLevel += 3 * (30/frameRate())
+        jumpHeight += 3 * (30/frameRate())
         if (jumpHeight >= 50){
           jumping = false
         }
       }
       else if (player.y > player.currentFloor.y){
-        player.y -= 3
-        cam.centerY += 3
-        cam.eyeY += 3
+        player.y -= 3 * (30/frameRate())
+        cam.centerY += 3 * (30/frameRate())
+        cam.eyeY += 3 * (30/frameRate())
         player.eyeLevel = player.y + player.height
         if (player.y <= player.currentFloor.y){
           jumpHeight = 0
           player.y = player.currentFloor.y 
-          player.eyeLevel = player.y + player.height
-          cam.eyeY = -player.eyeLevel
-          cam.
+          //player.eyeLevel = player.y + player.height
+          //cam.eyeY = -player.eyeLevel
+          //cam.centerY = player.eyeLevel + tan(player.angleUD)
         }
       }
       ui()
