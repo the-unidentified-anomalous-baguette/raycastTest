@@ -231,15 +231,17 @@ class pc{
     let z2 = this.z - 200*cos(this.angleLR)
 
     for (let i of objects){
-      let x3 = i.x - (i.collWidth/2)*cos(this.angleLR)
-      let z3 = i.z - (i.collWidth/2)*sin(this.angleLR)
-      let x4 = i.x + (i.collWidth/2)*cos(this.angleLR)
-      let z4 = i.z + (i.collWidth/2)*sin(this.angleLR)
-      let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-      let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-      let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-      if (0 <= t && t <= 1 && 0 <= u && u <= 1){
-        return true
+      if (i.canInteract == true){
+        let x3 = i.x - (i.width/2)*cos(this.angleLR)
+        let z3 = i.z - (i.width/2)*sin(this.angleLR)
+        let x4 = i.x + (i.width/2)*cos(this.angleLR)
+        let z4 = i.z + (i.width/2)*sin(this.angleLR)
+        let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+        let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+        let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+        if (0 <= t && t <= 1 && 0 <= u && u <= 1){
+          return true
+        }
       }
     }
     return false
@@ -589,7 +591,6 @@ class ai{
         this.followPath()
         break;
       case 'm':
-        console.log('doing melee')
         break;
     }
     this.meleeCheck()
@@ -613,6 +614,21 @@ class ai{
       }
     }
   }
+}
+
+class interactee{
+  constructor(x, y, z, height, width, hoverText){
+    this.x = x
+    this.y = y
+    this.z = z
+    this.height = height
+    this.width = width
+    this.hoverText = hoverText
+  }
+}
+
+class trader{
+  constructor(x, y, z, stockList, )
 }
 
 function beginGame(){
@@ -660,12 +676,13 @@ let jumpHeight = 0
 let font
 let grid
 let objects
+let ais
+let interactibles
 let impSprite
 let brick
 let tallWall
 let gameState = 'menu'
 let mainMenuButts
-let ais
 let meleeMin = 75
 let meleeMax = 150
 
