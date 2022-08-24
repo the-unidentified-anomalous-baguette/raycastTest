@@ -11,7 +11,7 @@ class ai{
     let foundGoal = false
     while (foundGoal == false){
       let nodes = []
-      this.goal = [random(50, 430), random(50, 350)]
+      this.goal = [mouseX, mouseY]
       // choose a random goal
       for (let i of grid){
         nodes.push([i, dist(i.x, i.z, this.goal[0], this.goal[1])])
@@ -252,6 +252,7 @@ function fullPathfinding(AI){
       }
       else if (i == walls[walls.length - 1]){ 
         // if no walls between AI and goal, skip pathfinding
+        console.log('found straight path')
         AI.path = [AI.goal]
       }
     }
