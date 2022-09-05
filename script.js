@@ -86,6 +86,7 @@ class pc{
     this.weapon = weapon
     this.attacking = false
     this.attackFrame = 0
+    this.inventory = new inventory([], [], [])
   }
 
   floorCheck(){
@@ -245,6 +246,10 @@ class pc{
       this.y += this.speed
       this.eyeLevel = this.y + this.height
     }
+    if (keyIsDown(73)){
+      exitPointerLock()
+      gameState = 'inventory'
+    }
   }
 
   interactCheck(){
@@ -400,9 +405,11 @@ class entity{
           Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1),
           this.sWidth, this.sHeight
         )
-        this.frame += 0.2
-        if (this.frame >= 4){
-          this.frame = 0
+        if (this.frame < 4 && gameState == 'game'){
+          this.frame += 0.2
+          if (this.frame >= 4){
+            this.frame = 0
+          }
         }
         break
       case 'd':
@@ -412,7 +419,7 @@ class entity{
           this.sWidth * (Math.floor(this.frame) + 5), this.sHeight * 3,
           this.sWidth, this.sHeight
         )
-        if (this.frame < 7){
+        if (this.frame < 7 && gameState == 'game'){
           this.frame += 0.6
         }
         break
@@ -735,12 +742,43 @@ class cell{
 }
 
 class weapon{
-  constructor(damage, spriteSheet, aF, dF, spriteSizes){
+  constructor(name, damage, spriteSheet, aF, dF, spriteSizes){
     this.damage = damage
     this.spriteSheet = spriteSheet
     this.aF = aF
     this.dF = dF
     this.spriteSizes = spriteSizes
+    this.name = name
+  }
+}
+
+class apparel{
+  constructor(name, defense){
+    this.defense = defense
+    this.name = name
+  }
+}
+
+class consumable{
+  constructor(name, func){
+    this.name = name
+    this.func = func
+  }
+
+  executeFunc(){
+    switch (this.func){
+      case 'heal25':
+        player.hp += 25
+        break;
+    }
+  }
+}
+
+class inventory{
+  constructor(weapons, apparels, usables){
+    this.weapons = weapons
+    this.apparels = apparels
+    this.usables = usables
   }
 }
 
@@ -859,6 +897,8 @@ let savedWorld
 let beginButt
 let loadButt
 let loadButton
+let crossImg
+let exitButton
 
 function preload(){
   font = loadFont('COMIC.ttf')
@@ -868,11 +908,12 @@ function preload(){
   swordSprite = loadImage('sword1.png')
   beginButt = loadImage('beginButton.png')
   loadButt = loadImage('deathButton.png')
+  crossImg =  loadImage('exitButton.png')
 }
 
 function setup() {
   impSpritesheet = new spritesheet(impSprite, 42, 61)
-  defSword = new weapon(10, swordSprite, 15, 6, [])
+  defSword = new weapon('default sword', 10, swordSprite, 3, 6, [])
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
   textAlign(CENTER, CENTER)
@@ -882,6 +923,7 @@ function setup() {
     new menuButton(-512, -5, 200, 60, 'beginGame', beginButt, 200, 60)
   ]
   loadButton = new menuButton(-100, 100, 200, 60, 'load', loadButt, 200, 60)
+  exitButton = new menuButton(400, -200, 32, 32, 'beginGame', crossImg, 64, 64)
   cam = createCamera();
   uiCam = createCamera();
   setCamera(cam)
@@ -959,10 +1001,12 @@ function setup() {
   noStroke()
   saveGame()
   //frameRate(30)
+  player.inventory.weapons.push(defSword)
+  player.inventory.weapons.push(defSword)
+  player.inventory.weapons.push(defSword)
 }
 
 function draw() {
-  console.log(savedWorld[0].hp)
   player.speed = 8 * (30/frameRate())
   background(0)
   switch (gameState){
@@ -1087,6 +1131,20 @@ function draw() {
     case 'death':
       deathUI()
       break
+    case 'inventory':
+      for (let i of currentCell.walls){
+        i.render()
+      }
+      for (let i of currentCell.floors){
+        i.render()
+      }
+      // for (let i of currentCell.AIs){
+      //   i.fullPathfinding()
+      // }
+      for (let i of currentCell.objects){
+        i.render()
+      }
+      inventoryUI()
     }
 }
 
@@ -1097,7 +1155,7 @@ function ui(){
     setCamera(uiCam) // switches cam
     uiCam.setPosition(0, 0, 0)
     fill(255, 0, 0)
-    image(swordSprite, 
+    image(player.weapon.spriteSheet,
       -512, -288,
       1024, 576,
       320 * player.attackFrame, 0,
@@ -1145,7 +1203,7 @@ function pauseUI(){
 function dialogueUI(entity){
   let reactButtons = []
   for (let i = 0; i < entity.useData[talkDepth + 1][0].length; i++){
-    reactButtons.push(new menuButton(56, 100 * (i-2), 400, 100, 'advanceTalk' + i, [purple, green], 0, 0))
+    reactButtons.push(new menuButton(56, 100 * (i-2), 400, 100, 'advanceTalk' + i, 'noSpriteSheet', 0, 0))
   }
   push()
     setCamera(uiCam)
@@ -1195,5 +1253,36 @@ function saveFailUI(){
     textAlign(LEFT, TOP)
     fill(255)
     text('You can not save while jumping or falling', -512, -288)
+  pop()
+}
+
+function inventoryUI(){
+  let weaponsButtons = []
+  for (let i = 0; i < player.inventory.weapons.length; i++){
+    weaponsButtons.push(new menuButton(-400, -180 + (20 * i), 800/3, 20, 'beginGame', player.inventory.weapons[i], 64, 64))
+  }
+  push()
+    setCamera(uiCam)
+    uiCam.setPosition(0, 0, 50)
+    image(player.weapon.spriteSheet,
+      -512, -288,
+      1024, 576,
+      320 * player.attackFrame, 0,
+      320, 180
+      )
+    fill(25, 25, 25, 170)
+    rect(0, 0, 800, 400)
+    fill(255, 0, 0)
+    textSize(20)
+    text('weapons', -800/3, -200)
+    text('apparel', 0, -200)
+    text('consumables', 800/3, -200)
+    for (let i of weaponsButtons){
+      text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
+    }
+    exitButton.render()
+      if (mouseIsPressed){
+        exitButton.executeFunc()
+      }
   pop()
 }
