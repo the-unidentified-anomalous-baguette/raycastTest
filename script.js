@@ -865,6 +865,7 @@ function loadGame(){
   player = savedWorld[0]
   world = savedWorld[1]
   currentCell = world[savedWorld[2]]
+  currentCellNo = savedWorld[2]
   saveGame()
 }
 
