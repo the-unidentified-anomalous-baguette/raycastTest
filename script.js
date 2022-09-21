@@ -87,6 +87,8 @@ class pc{
     this.attacking = false
     this.attackFrame = 0
     this.inventory = new inventory([], [], [])
+    this.xp = 0
+    this.level = 0
   }
 
   floorCheck(){
@@ -375,6 +377,8 @@ class entity{
     this.useData = useData
     this.animation = 'i'
     this.frame = 0
+    this.hp = 0
+    this.maxHp = 0
   }
   
   render(){
@@ -399,15 +403,15 @@ class entity{
         )
         break
       case 'w':
-        image(this.spriteSheet,
-          -this.collWidth/2, -this.height/2,
-          this.collWidth, this.height,
-          Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1),
-          this.sWidth, this.sHeight
+        image(this.spriteSheet, // tells it to use its own spritesheet
+          -this.collWidth/2, -this.height/2, // selects origin for rendering
+          this.collWidth, this.height, // how big to draw it
+          Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1), //select correct area
+          this.sWidth, this.sHeight // size of area from sheet to use
         )
-        if (this.frame < 4 && gameState == 'game'){
-          this.frame += 0.2
-          if (this.frame >= 4){
+        if (this.frame < 4 && gameState == 'game'){ //only when unpaused
+          this.frame += 0.2 //move animation forwards
+          if (this.frame >= 4){ //reset before it flows into wrong sprite area
             this.frame = 0
           }
         }
@@ -424,6 +428,8 @@ class entity{
         }
         break
     }
+    fill(red)
+    rect(0, (-this.height/2) - 5, this.collWidth * (this.hp / this.maxHp), 5)
     pop()
   }
 }
@@ -437,7 +443,7 @@ class spritesheet{
 }
 
 class ai{
-  constructor(x, y, z, angle, speed, hp, linkedNtt, mode, weapon){
+  constructor(x, y, z, angle, speed, hp, linkedNtt, mode, weapon, xp){
     this.x = x
     this.y = y
     this.z = z
@@ -450,6 +456,8 @@ class ai{
     this.goal = []
     this.weapon = weapon
     this.attackFrame = 0
+    this.xp = xp
+    this.maxHp = hp
   }
 
   chooseGoal(){
@@ -491,7 +499,7 @@ class ai{
     for (let i of nodes){
       for (let j of currentCell.walls){
         if (intersectCheck(
-          [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2]) && i.base <= this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height >= this.y + 51){
+          [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2]) && j.base <= this.y + currentCell.objects[this.linkedNtt].height && j.base + j.height >= this.y + 51){
           break
         }
         else if (j == currentCell.walls[currentCell.walls.length - 1]){
@@ -691,7 +699,7 @@ class ai{
             angle = acos(adj/hyp)
           } 
           if (Math.floor(angle) == Math.floor(this.angle)){
-            player.hp -= this.weapon.damage
+            player.hp -= this.weapon.damage / (player.level + 1)
           }
           this.mode = 'a'
         }
@@ -701,14 +709,20 @@ class ai{
         }
         break
       case 'd':
+        this.hp = 0
+        currentCell.objects[this.linkedNtt].animation = 'd'
         break;
     }
     if (this.mode != 'd'){
       if (this.hp <= 0){
+        player.xp += this.xp
         this.mode = 'd'
+        this.hp = 0
         currentCell.objects[this.linkedNtt].animation = 'd'
         currentCell.objects[this.linkedNtt].frame = 0
       }
+      currentCell.objects[this.linkedNtt].hp = this.hp
+      currentCell.objects[this.linkedNtt].maxHp = this.maxHp
     }
   }
 
@@ -749,6 +763,7 @@ class weapon{
     this.dF = dF
     this.spriteSizes = spriteSizes
     this.name = name
+    this.type = 'weapon'
   }
 }
 
@@ -756,6 +771,7 @@ class apparel{
   constructor(name, defense){
     this.defense = defense
     this.name = name
+    this.type = 'apparel'
   }
 }
 
@@ -763,6 +779,7 @@ class consumable{
   constructor(name, func){
     this.name = name
     this.func = func
+    this.type = 'consumable'
   }
 
   executeFunc(){
@@ -865,6 +882,7 @@ function loadGame(){
   player = savedWorld[0]
   world = savedWorld[1]
   currentCell = world[savedWorld[2]]
+  currentCellNo = savedWorld[2]
   saveGame()
 }
 
@@ -913,7 +931,7 @@ function preload(){
 
 function setup() {
   impSpritesheet = new spritesheet(impSprite, 42, 61)
-  defSword = new weapon('default sword', 10, swordSprite, 3, 6, [])
+  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [])
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
   textAlign(CENTER, CENTER)
@@ -942,12 +960,14 @@ function setup() {
     new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
     new floor(1000, 1000, 300, 250, 500, 0, brick, {})
   ],[
-    new entity(1000, 0, 5000, impSpritesheet, 50, 175, false, []), new entity(5000, 0, 1000, impSpritesheet, 50, 175, false, []), 
+    new entity(1000, 0, 5000, impSpritesheet, 50, 175, false, []), new entity(5000, 0, 1000, impSpritesheet, 50, 175, false, []),
+    new entity(1000, 0, 5000, impSpritesheet, 50, 175, false, []), new entity(5000, 0, 1000, impSpritesheet, 50, 175, false, []),
     new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', 
     [1, 0, 0, 0]
       )
   ],[
-    new ai(3600, 0, 2000, 0, 20, 50, 0, 'h', defSword)//, new ai(2000, 0, 2000, 0, 4, 50, 1, 'h', 4)
+    new ai(3600, 0, 2000, 0, 5, 50, 0, 'h', defSword, 50), new ai(1500, 0, 1000, 0, 5, 50, 1, 'h', defSword, 50),
+    new ai(3700, 0, 2100, 0, 5, 50, 2, 'h', defSword, 50), new ai(2000, 0, 3000, 0, 5, 50, 3, 'h', defSword, 50)//, new ai(2000, 0, 2000, 0, 4, 50, 1, 'h', 4)
   ],[
     new pathNode(1000, 1000, [1, 2, 3], 'a'), new pathNode(2000, 800, [0], 'b'), 
     new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
@@ -1000,7 +1020,7 @@ function setup() {
   textFont(font)
   noStroke()
   saveGame()
-  //frameRate(30)
+  frameRate(30)
   player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
@@ -1056,7 +1076,7 @@ function draw() {
         if (player.attackFrame == player.weapon.dF){
           interactCheckVariable = player.attackCheck()
           if (interactCheckVariable != false){
-            interactCheckVariable.hp -= player.weapon.damage
+            interactCheckVariable.hp -= player.weapon.damage + player.level
           }
         }
         if (player.attackFrame > player.weapon.aF){
@@ -1102,6 +1122,10 @@ function draw() {
       if (player.hp <= 0){
         gameState = 'death'
         exitPointerLock()
+      }
+      else if (player.xp >= 100){
+        player.xp -= 100
+        player.level += 1
       }
       break
     case 'pause':
@@ -1163,6 +1187,7 @@ function ui(){
       )
     rect(0, 250, player.hp, 30)
     fill(0)
+    text(player.xp, 500, 250)
     strokeWeight(1)
     line(-10, -10, 10, 10)
     line(10, -10, -10, 10)
@@ -1259,7 +1284,11 @@ function saveFailUI(){
 function inventoryUI(){
   let weaponsButtons = []
   for (let i = 0; i < player.inventory.weapons.length; i++){
-    weaponsButtons.push(new menuButton(-400, -180 + (20 * i), 800/3, 20, 'beginGame', player.inventory.weapons[i], 64, 64))
+    weaponsButtons.push(new menuButton(-400, -175 + (20 * i), 800/3, 20, 'beginGame', player.inventory.weapons[i], 64, 64))
+  }
+  let apparelButtons = []
+  for (let i = 0; i < player.inventory.apparels.length; i++){
+    apparelButtons.push(new menuButton(-400/3, -175 + (20 * i), 800/3, 20, 'equipRmr', player.inventory.apparels[i], 64, 64))
   }
   push()
     setCamera(uiCam)
@@ -1278,6 +1307,9 @@ function inventoryUI(){
     text('apparel', 0, -200)
     text('consumables', 800/3, -200)
     for (let i of weaponsButtons){
+      text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
+    }
+    for (let i of apparelButtons){
       text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
     }
     exitButton.render()
