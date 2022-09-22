@@ -165,7 +165,7 @@ class pc{
       }
     }
     for (let i of currentCell.objects){
-      if(dist(x4, z4, i.x, i.z) <= 75){
+      if(dist(x4, z4, i.x, i.z) <= 75 && i.y + i.height > this.y && i.y < this.y + this.height){
         return false
       }
     }
@@ -379,6 +379,7 @@ class entity{
     this.frame = 0
     this.hp = 0
     this.maxHp = 0
+    this.ogIndex = 0
   }
   
   render(){
@@ -804,12 +805,30 @@ function beginGame(){
   requestPointerLock()
 }
 
-function sortFunction(a, b) {
+function sortFunction(a, b){
   if (a[1] === b[1]) {
-      return 0;
+    return 0
   }
   else {
-      return (a[1] < b[1]) ? -1 : 1;
+    return (a[1] < b[1]) ? -1 : 1
+  }
+}
+
+function entitySort(a, b){
+  if (dist(a.x, a.z, player.x, player.z) === dist(b.x, b.z, player.x, player.z)){
+    return 0
+  }
+  else {
+    return (dist(a.x, a.z, player.x, player.z) > dist(b.x, b.z, player.x, player.z)) ? -1 : 1
+  }
+}
+
+function entityUnsort(a, b){
+  if (a.ogIndex === b.ogIndex){
+    return 0
+  }
+  else {
+    return (a.ogIndex < b.ogIndex) ? -1 : 1
   }
 }
 
@@ -917,10 +936,13 @@ let loadButt
 let loadButton
 let crossImg
 let exitButton
+let chibiSprite
+let chibiSpritesheet
 
 function preload(){
   font = loadFont('COMIC.ttf')
   impSprite = loadImage('imp.png')
+  chibiSprite = loadImage('chibiSprite.png')
   brick = loadImage('brickTemp.png')
   tallWall = loadImage('tallWall.png')
   swordSprite = loadImage('sword1.png')
@@ -931,6 +953,7 @@ function preload(){
 
 function setup() {
   impSpritesheet = new spritesheet(impSprite, 42, 61)
+  chibiSpritesheet = new spritesheet(chibiSprite, 44, 50)
   defSword = new weapon('default sword', 10, swordSprite, 3, 2, [])
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
@@ -960,8 +983,8 @@ function setup() {
     new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
     new floor(1000, 1000, 300, 250, 500, 0, brick, {})
   ],[
-    new entity(1000, 0, 5000, impSpritesheet, 50, 175, false, []), new entity(5000, 0, 1000, impSpritesheet, 50, 175, false, []),
-    new entity(1000, 0, 5000, impSpritesheet, 50, 175, false, []), new entity(5000, 0, 1000, impSpritesheet, 50, 175, false, []),
+    new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, []), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, []),
+    new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, []), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, []),
     new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', 
     [1, 0, 0, 0]
       )
@@ -974,6 +997,9 @@ function setup() {
     new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
     new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
   ])
+  for (let i = 0; i < testCell.objects.length; i++){
+    testCell.objects[i].ogIndex = i
+  }
   testCell2 = new cell([
     new boundary(2500, 1000, 3000, 900, brick, 250, 0), new boundary(3000, 2000, 2500, 2500, brick, 250, 0), new boundary(2000, 2500, 800, 2200, brick, 250, 0), new boundary(800, 2200, 500, 500, brick, 250, 0),
     new boundary(2500, 2500, 2500, 3000, brick, 250, 0), new boundary(2500, 3000, 3000, 3250, brick, 250, 0), new boundary(3000, 3250, 2500, 3500, brick, 250, 0), new boundary(2500, 3500, 2000, 3400, brick, 250, 0),
@@ -1006,6 +1032,9 @@ function setup() {
     new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
     new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
   ])
+  for (let i = 0; i < testCell2.objects.length; i++){
+    testCell2.objects[i].ogIndex = i
+  }
   world = [testCell, testCell2]
   currentCell = testCell
   currentCellNo = 0
@@ -1046,9 +1075,11 @@ function draw() {
       for (let i of currentCell.AIs){
         i.fullPathfinding()
       }
+      currentCell.objects = currentCell.objects.sort(entitySort)
       for (let i of currentCell.objects){
         i.render()
       }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
       if (keyIsDown(69)){
         interactCheckVariable = player.interactCheck()
         if (interactCheckVariable[0]){
