@@ -362,7 +362,7 @@ class pathNode{
 }
 
 class entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, interactible, useData){
+  constructor(x, y, z, spriteSheet, collWidth, height, interactible, useData, ogIndex){
     this.x = x
     this.y = y
     this.z = z
@@ -379,7 +379,7 @@ class entity{
     this.frame = 0
     this.hp = 0
     this.maxHp = 0
-    this.ogIndex = 0
+    this.ogIndex = ogIndex
   }
   
   render(){
@@ -869,7 +869,7 @@ function saveGame(){
     walls = Object.assign({}, walls)
     walls = Object.values(walls)
     for (let j of i.objects){
-      objects.push(new entity(j.x, j.y, j.z, new spritesheet(j.spriteSheet, j.sWidth, j.sHeight), j.collWidth, j.height, j.interactible, j.useData))
+      objects.push(new entity(j.x, j.y, j.z, new spritesheet(j.spriteSheet, j.sWidth, j.sHeight), j.collWidth, j.height, j.interactible, j.useData, j.ogIndex))
     }
     objects = Object.assign({}, objects)
     objects = Object.values(objects)
@@ -983,10 +983,10 @@ function setup() {
     new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
     new floor(1000, 1000, 300, 250, 500, 0, brick, {})
   ],[
-    new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, []), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, []),
-    new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, []), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, []),
+    new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, [], 0), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, [], 1),
+    new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, [], 2), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, [], 3),
     new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', 
-    [1, 0, 0, 0]
+    [1, 0, 0, 0], 4
       )
   ],[
     new ai(3600, 0, 2000, 0, 5, 50, 0, 'h', defSword, 50), new ai(1500, 0, 1000, 0, 5, 50, 1, 'h', defSword, 50),
@@ -1015,7 +1015,7 @@ function setup() {
     // new floor(1000, 1000, 300, 250, 500, 0, brick, {})
   ],[
     new entity(1000, 0, -100, impSpritesheet, 50, 175, 'loadZone', 
-    [0, 1200, 0, 1500]
+    [0, 1200, 0, 1500], 0
       ),
     new entity(500, 0, 1000, impSpritesheet, 50, 175, 'dialogue',
     [
@@ -1023,7 +1023,7 @@ function setup() {
       [['player response 1', 'player response 2'], ['npc reaction 1', 'npc reaction 2']],
       [['player response'], ['npc text line']],
       [['player final line'], ['never seen']]
-    ]
+    ], 1
       )
   ],[
   ],[
