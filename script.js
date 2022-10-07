@@ -1,6 +1,13 @@
 let red = [200,10, 10]
 let green = [10, 200, 10]
-let purple = [127, 0, 255]
+let grey = [150, 150, 150]
+let purple = [150, 10, 200]
+
+//********************************************************************************************************************
+//* REMINDER TO MAKE THE UNIVERSAL ACTION SWITCH:                                                                    *
+//* add the universal action switch to replace specific action switches for buttons, consumables, and other triggers *
+//* REMINDER END                                                                                                     *
+//********************************************************************************************************************
 
 class menuButton{
   constructor(x, y, w, h, func, spriteSheet, sW, sH){
@@ -22,14 +29,14 @@ class menuButton{
     let mousePosX = mouseX - 512
     let mousePosY = mouseY - 288
     if (mousePosX >= this.collX && mousePosX <= this.collW && mousePosY >= this.collY && mousePosY <= this.collH){
+      //checks if the mouse is over the button
       return 1
     }
     return 0
   }
 
   render(){
-    push()
-      //translate(this.transX, this.transY, 0)
+    push() //draws the buttons sprite, changes state by being hovered
       image(this.spriteSheet,
         this.collX, this.collY,
         this.w, this.h,
@@ -39,7 +46,7 @@ class menuButton{
     pop()
   }
 
-  executeFunc(){
+  executeFunc(){ //executes a buttons function (will be merged into universal action switch)
     if (this.checkHovered()){
       switch (this.func){
         case 'beginGame':
@@ -72,7 +79,7 @@ class menuButton{
 }
 
 class pc{
-  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor, hp, weapon){
+  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor, hp, weapon, {xp = 0, level = 0}){
     this.x = x
     this.y = y
     this.z = z
@@ -87,8 +94,8 @@ class pc{
     this.attacking = false
     this.attackFrame = 0
     this.inventory = new inventory([], [], [])
-    this.xp = 0
-    this.level = 0
+    this.xp = xp
+    this.level = level
   }
 
   floorCheck(){
@@ -99,8 +106,7 @@ class pc{
         let rottedX = (relX * cos(i.rotation)) + (relZ * sin(i.rotation))
         // player coords rotated to align with the tested floor tile
         let rottedZ = -(relX * sin(i.rotation)) + (relZ * cos(i.rotation))
-        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2
-          && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){
+        if (collideRectCircle(i.unrotX1, i.unrotZ1, i.width1, i.width2, rottedX, rottedZ, 150)){
           // checking if player is on the tile
           this.currentFloor = i // sets the floor the player stands on
         }
@@ -116,6 +122,7 @@ class pc{
     let den
     let t
     let u
+    //projects player forward, changes direction depending on where the player is trying to go
     if (dir == 'fw'){
       x4 = this.x + sin(this.angleLR) * this.speed
       z4 = this.z - cos(this.angleLR) * this.speed
@@ -134,6 +141,7 @@ class pc{
     }
   
     for (let i of currentCell.walls){
+      //checks if the players projected path collides with any walls
       if (i.base <= this.eyeLevel && i.base + i.height >= this.y + 51){
         let x1 = i.x1
         let x2 = i.x2
@@ -146,30 +154,35 @@ class pc{
         x3 = x4 + dz
         z3 = z4 - dx
         if (dist(x4, z4, i.x1, i.z1) <= 75 || dist(x4, z4, i.x2, i.z2) <= 75){
+          //checks if the players projected position would touch a walls end point
+          //necessary as other checks don't account for this
           return false
         }
         if (intersectCheck([x1, z1], [x2, z2], [x3, z3], [x4, z4])){
+          //checks if player would otherwise be within a wall
           return false
         }
-        // den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-        // t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-        // u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-        // if (t >= 0 && t <= 1 && u >= 0 && u <= 1){
-        //   return false
-        // }
         x3 = x4 - dz
         z3 = z4 + dx
         if (intersectCheck([x1, z1], [x2, z2], [x3, z3], [x4, z4])){
+          //also checks if player would be in a wall
+          return false
+        }
+        x3 = this.x
+        z3 = this.z
+        if (intersectCheck([x1, z1], [x2, z2], [x3, z3], [x4, z4])){
+          //also checks if player would pass through a wall while moving
           return false
         }
       }
     }
     for (let i of currentCell.objects){
-      if(dist(x4, z4, i.x, i.z) <= 75 && i.y + i.height > this.y && i.y < this.y + this.height){
+      //checks if the player would be colliding with an entity
+      if(dist(x4, z4, i.x, i.z) <= 75 && i.y + i.height > this.y && i.y < this.y + this.height && i.collisive == true){
         return false
       }
     }
-    return true
+    return true //if none of the invalid scenarios are found, return true
   }
 
   controls(){
@@ -240,17 +253,28 @@ class pc{
     cam.centerX = cam.eyeX + sin(this.angleLR)
     cam.centerY = cam.eyeY - tan(this.angleUD)
     cam.centerZ = cam.eyeZ - cos(this.angleLR)
-    if (keyIsDown(32) && jumpHeight == 0){//space
+    if (keyIsDown(32) && jumpHeight == 0 && this.y == this.currentFloor.y){//space
       jumping = true
     }
     this.floorCheck()
-    if (this.y < this.currentFloor.y){
-      this.y += this.speed
-      this.eyeLevel = this.y + this.height
+    if (jumping == false){
+      if (this.y < this.currentFloor.y){
+        if (this.currentFloor.y - this.y < 12.5){
+          this.y = this.currentFloor.y
+        }
+        else {
+          this.y += (this.currentFloor.y - this.y)/2
+        }
+        this.eyeLevel = this.y + this.height
+      }
     }
     if (keyIsDown(73)){
       exitPointerLock()
       gameState = 'inventory'
+    }
+    if (this.xp >= 100){
+      this.level += 1
+      this.xp -= 100
     }
   }
 
@@ -317,7 +341,8 @@ class boundary{
 
   render(){
     push()
-    texture(this.texture)
+    //texture(this.texture)
+    fill(red)
     translate(this.midX, this.midY, this.midZ + 500)
     rotateY(this.angle)
     plane(this.width, this.height)
@@ -343,7 +368,8 @@ class floor{
 
   render(){
     push()
-    texture(this.texture)
+    //texture(this.texture)
+    fill(grey)
     translate(this.x, -this.y, this.z + 500)
     rotateX(90)
     rotateZ(this.rotation)
@@ -362,13 +388,14 @@ class pathNode{
 }
 
 class entity{
-  constructor(x, y, z, spriteSheet, collWidth, height, interactible, useData, ogIndex){
+  constructor(x, y, z, spriteSheet, collWidth, height, interactible, useData, ogIndex, {canCollide = true}){
     this.x = x
     this.y = y
     this.z = z
-    this.spriteSheet = spriteSheet.image
-    this.sWidth = spriteSheet.sWidth
-    this.sHeight = spriteSheet.sHeight
+    this.spriteSheet = spriteSheet
+    // this.spriteSheet = spriteSheet.image
+    // this.sWidth = spriteSheet.sWidth
+    // this.sHeight = spriteSheet.sHeight
     this.collWidth = collWidth
     this.height = height
     this.midVert = - (y + (height/2))
@@ -380,57 +407,70 @@ class entity{
     this.hp = 0
     this.maxHp = 0
     this.ogIndex = ogIndex
+    this.collisive = canCollide
   }
   
-  render(){
-    let spriteAngle = Math.floor((this.angle - player.angleLR + 22.5 + 180)/45)
-    this.midVert = -(this.y + (this.height/2))
-    if (spriteAngle >= 8){
+  render() {
+    let spriteAngle = Math.floor((this.angle - player.angleLR + 22.5 + 180) / 45)
+    this.midVert = -(this.y + (this.height / 2))
+    if (spriteAngle >= 8) {
       spriteAngle -= 8
     }
-    else if (spriteAngle < 0){
+    else if (spriteAngle < 0) {
       spriteAngle += 8
     }
     push()
+    fill(this.spriteSheet)
     translate(this.x, this.midVert, this.z + 500)
     rotateY(360 - player.angleLR)
-    switch (this.animation){
-      case 'i':
-        image(this.spriteSheet,
-          -this.collWidth/2, -this.height/2,
-          this.collWidth, this.height,
-          this.sWidth * spriteAngle, 0,
-          this.sWidth, this.sHeight
-        )
-        break
-      case 'w':
-        image(this.spriteSheet, // tells it to use its own spritesheet
-          -this.collWidth/2, -this.height/2, // selects origin for rendering
-          this.collWidth, this.height, // how big to draw it
-          Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1), //select correct area
-          this.sWidth, this.sHeight // size of area from sheet to use
-        )
-        if (this.frame < 4 && gameState == 'game'){ //only when unpaused
-          this.frame += 0.2 //move animation forwards
-          if (this.frame >= 4){ //reset before it flows into wrong sprite area
-            this.frame = 0
-          }
-        }
-        break
-      case 'd':
-        image(this.spriteSheet,
-          -this.collWidth/2, -this.height/2,
-          this.collWidth, this.height,
-          this.sWidth * (Math.floor(this.frame) + 5), this.sHeight * 3,
-          this.sWidth, this.sHeight
-        )
-        if (this.frame < 7 && gameState == 'game'){
-          this.frame += 0.6
-        }
-        break
+    rect(0, 0, this.collWidth, this.height)
+    // switch (this.animation) {
+    //   case 'i':
+    //     image(this.spriteSheet,
+    //       -this.collWidth / 2, -this.height / 2,
+    //       this.collWidth, this.height,
+    //       this.sWidth * spriteAngle, 0,
+    //       this.sWidth, this.sHeight
+    //     )
+    //     break
+    //   case 'w':
+    //     image(this.spriteSheet,
+    //       -this.collWidth/2, -this.height/2,
+    //       this.collWidth, this.height,
+    //       Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1),
+    //       this.sWidth, this.sHeight
+    //     )
+    //     if (gameState == 'game'){
+    //       this.frame += 0.2
+    //       if (this.frame >= 4) {
+    //         this.frame = 0
+    //       }
+    //     }
+    //     break
+    //   case 'a':
+    //     image(this.spriteSheet,
+    //       -this.collWidth/2, -this.height/2,
+    //       this.collWidth, this.height,
+    //       this.sWidth * (spriteAngle + 5), this.sHeight * (2 + Math.floor(this.frame)),
+    //       this.sWidth, this.sHeight
+    //      )
+    //     break
+    //   case 'd':
+    //     image(this.spriteSheet,
+    //       -this.collWidth / 2, -this.height / 2,
+    //       this.collWidth, this.height,
+    //       this.sWidth * (Math.floor(this.frame) + 5), this.sHeight,
+    //       this.sWidth, this.sHeight
+    //     )
+    //     if (this.frame < 4) {
+    //       this.frame += 0.6
+    //     }
+    //     break
+    //   }
+    if(this.animation != 'd'){
+      fill(red)
+      rect(0, (-this.height/2) - 5, this.collWidth * (this.hp / this.maxHp), 5)
     }
-    fill(red)
-    rect(0, (-this.height/2) - 5, this.collWidth * (this.hp / this.maxHp), 5)
     pop()
   }
 }
@@ -475,7 +515,7 @@ class ai{
       while (nodes.length >= 1){
         for (let i of currentCell.walls){
           if (intersectCheck(
-            [nodes[0][0].x, nodes[0][0].z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){//} && i.base <= this.y + this.height && i.base + i.height >= this.y + 51){
+            [nodes[0][0].x, nodes[0][0].z], this.goal, [i.x1, i.z1], [i.x2, i.z2]) && i.base <= this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
           // start from first sorted node, check if there's a wall between it and goal
             nodes.shift() // remove from list if there are
             break
@@ -500,7 +540,7 @@ class ai{
     for (let i of nodes){
       for (let j of currentCell.walls){
         if (intersectCheck(
-          [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2]) && j.base <= this.y + currentCell.objects[this.linkedNtt].height && j.base + j.height >= this.y + 51){
+          [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2]) && j.base <= this.y + currentCell.objects[this.linkedNtt].height && j.base + j.height > this.y + 50){
           break
         }
         else if (j == currentCell.walls[currentCell.walls.length - 1]){
@@ -589,7 +629,7 @@ class ai{
     let pathLength = this.path.length
     for (let i of currentCell.walls){
       // checks for shortcut to player
-      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y){
+      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
         break
       }
       else if (i == currentCell.walls[currentCell.walls.length - 1]){
@@ -600,7 +640,7 @@ class ai{
     for (let j = this.path.length - 1; j >= 0; j -= 1){
       for (let i of currentCell.walls){
         // checks for shortcut between nodes
-        if (intersectCheck([this.x, this.z], this.path[j], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y){
+        if (intersectCheck([this.x, this.z], this.path[j], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
           break
         }
         else if (i == currentCell.walls[currentCell.walls.length - 1]){
@@ -635,7 +675,7 @@ class ai{
     if (hyp <= meleeMax && hyp >= meleeMin){ // if in melee range
       for (let i of currentCell.walls){
         // checks if there's a wall in the way
-        if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y){
+        if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
           this.mode = 'h'
           return false
         }
@@ -654,11 +694,11 @@ class ai{
     }
   }
 
-  fullPathfinding(){
-    switch (this.mode){
-      case 'h':
+  fullPathfinding() {
+    switch (this.mode) {
+      case 'h': // hostile
         let finalNode
-        if (this.goal.length == 0){ // if the AI has no goal
+        if (this.goal.length == 0) { // if the AI has no goal
           finalNode = this.chooseGoal()
           // run goal finding algorithm (chooses goal and finds nearest node to it)
           this.path.push(this.findFirstNode()) // find first node
@@ -671,56 +711,57 @@ class ai{
         currentCell.objects[this.linkedNtt].animation = 'w'
         this.meleeCheck()
         break;
-      case 'm':
+      case 'm': // melee
         let opp = this.x - player.x
         let adj = player.z - this.z
         let hyp = dist(this.x, this.z, player.x, player.z)
         let angle
-        if (asin(opp/hyp) <= 0){
-          angle = 360-acos(adj/hyp)
+        if (asin(opp / hyp) <= 0) {
+          angle = 360 - acos(adj / hyp)
         }
-        if(asin(opp/hyp) >= 0){
-          angle = acos(adj/hyp)
+        if (asin(opp / hyp) >= 0) {
+          angle = acos(adj / hyp)
         } // calculate the angle between north and the position to move to
         this.angle = angle
         this.mode = 'a'
         currentCell.objects[this.linkedNtt].angle = this.angle
         break;
-      case 'a':
-        this.attackFrame += 1
-        if (this.attackFrame == this.weapon.dF && this.meleeCheck()){
+      case 'a': // attacking
+        currentCell.objects[this.linkedNtt].animation = 'a'
+        this.attackFrame += 0.25
+        if (this.attackFrame == this.weapon.dF && this.meleeCheck()) {
           let opp = this.x - player.x
           let adj = player.z - this.z
           let hyp = dist(this.x, this.z, player.x, player.z)
           let angle
-          if (asin(opp/hyp) <= 0){
-            angle = 360-acos(adj/hyp)
+          if (asin(opp / hyp) <= 0) {
+            angle = 360 - acos(adj / hyp)
           }
-          if(asin(opp/hyp) >= 0){
-            angle = acos(adj/hyp)
-          } 
-          if (Math.floor(angle) == Math.floor(this.angle)){
+          if (asin(opp / hyp) >= 0) {
+            angle = acos(adj / hyp)
+          }
+          if (Math.floor(angle) == Math.floor(this.angle)) {
             player.hp -= this.weapon.damage / (player.level + 1)
           }
           this.mode = 'a'
         }
-        if (this.attackFrame > this.weapon.aF){
+        if (this.attackFrame >= this.weapon.aF) {
           this.attackFrame = 0
           this.meleeCheck()
         }
+        currentCell.objects[this.linkedNtt].frame = this.attackFrame
         break
-      case 'd':
-        this.hp = 0
+      case 'd': // dead
         currentCell.objects[this.linkedNtt].animation = 'd'
         break;
     }
-    if (this.mode != 'd'){
-      if (this.hp <= 0){
-        player.xp += this.xp
+    if (this.mode != 'd') {
+      if (this.hp <= 0) {
         this.mode = 'd'
-        this.hp = 0
         currentCell.objects[this.linkedNtt].animation = 'd'
         currentCell.objects[this.linkedNtt].frame = 0
+        currentCell.objects[this.linkedNtt].hp = 0
+        player.xp += this.xp
       }
       currentCell.objects[this.linkedNtt].hp = this.hp
       currentCell.objects[this.linkedNtt].maxHp = this.maxHp
@@ -733,13 +774,11 @@ class ai{
         let relX = this.x - i.x
         let relZ = this.z - i.z
         let rottedX = (relX * cos(i.rotation)) + (relZ * sin(i.rotation))
-        // player coords rotated to align with the tested floor tile
+        // AI coords rotated to align with the tested floor tile
         let rottedZ = -(relX * sin(i.rotation)) + (relZ * cos(i.rotation))
-        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2
-          && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){
-          // checking if player is on the tile
-          this.y = i.y // sets the floor the player stands on
-          this.midVert = - (this.y + (this.height/2))
+        if (rottedX >= i.unrotX1 && rottedX <= i.unrotX2 && rottedZ >= i.unrotZ1 && rottedZ <= i.unrotZ2){ // checking if AI is on the tile
+          this.y = i.y // sets the floor the AI stands on
+          this.midVert = -(this.y + (this.height/2))
         }
       }
     }
@@ -832,6 +871,15 @@ function entityUnsort(a, b){
   }
 }
 
+function floorSort(a, b){
+  if (a.y == b.y){
+    return 0
+  }
+  else {
+    return (a.y > b.y) ? -1 : 1
+  }
+}
+
 function intersectCheck(l11, l12, l21, l22){
   let x1 = l21[0]
   let x2 = l22[0]
@@ -854,7 +902,7 @@ function intersectCheck(l11, l12, l21, l22){
 }
 
 function saveGame(){
-  savedWorld = [new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon),
+  savedWorld = [new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, {xp: player.xp, level: player.level}),
     [], currentCellNo
    ]
   for (let i of world){
@@ -869,12 +917,12 @@ function saveGame(){
     walls = Object.assign({}, walls)
     walls = Object.values(walls)
     for (let j of i.objects){
-      objects.push(new entity(j.x, j.y, j.z, new spritesheet(j.spriteSheet, j.sWidth, j.sHeight), j.collWidth, j.height, j.interactible, j.useData, j.ogIndex))
+      objects.push(new entity(j.x, j.y, j.z, new spritesheet(j.spriteSheet, j.sWidth, j.sHeight), j.collWidth, j.height, j.interactible, j.useData, j.ogIndex, {canCollide: j.collisive}))
     }
     objects = Object.assign({}, objects)
     objects = Object.values(objects)
     for (let j of i.AIs){
-      AIs.push(new ai(j.x, j.y, j.z, j.angle, j.speed, j.hp, j.linkedNtt, j.mode, j.weapon))
+      AIs.push(new ai(j.x, j.y, j.z, j.angle, j.speed, j.hp, j.linkedNtt, j.mode, j.weapon, j.xp))
     }
     AIs = Object.assign({}, AIs)
     AIs = Object.values(AIs)
@@ -929,6 +977,7 @@ let testCell2
 let currentCell
 let currentCellNo
 let defSword
+let nmeSword
 let world
 let savedWorld
 let beginButt
@@ -955,6 +1004,7 @@ function setup() {
   impSpritesheet = new spritesheet(impSprite, 42, 61)
   chibiSpritesheet = new spritesheet(chibiSprite, 44, 50)
   defSword = new weapon('default sword', 10, swordSprite, 3, 2, [])
+  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [])
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
   textAlign(CENTER, CENTER)
@@ -969,33 +1019,43 @@ function setup() {
   uiCam = createCamera();
   setCamera(cam)
   testCell = new cell([
-    new boundary(500, 500, 2500, 500, tallWall, 250, 0), new boundary(2500, 500, 2500, 1000, brick, 250, 0), new boundary(2500, 1000, 1500, 1250, brick, 250, 0),
-    new boundary(2500, 1000, 3000, 900, brick, 250, 0), new boundary(3000, 2000, 2500, 2500, brick, 250, 0), new boundary(2000, 2500, 800, 2200, brick, 250, 0), new boundary(800, 2200, 500, 500, brick, 250, 0),
-    new boundary(2500, 2500, 2500, 3000, brick, 250, 0), new boundary(2500, 3000, 3000, 3250, brick, 250, 0), new boundary(3000, 3250, 2500, 3500, brick, 250, 0), new boundary(2500, 3500, 2000, 3400, brick, 250, 0),
-    new boundary(2000, 3400, 800, 2200, brick, 250, 0), new boundary(1500, 1250, 1800, 1400, brick, 250, 0), new boundary(1800, 1400, 2000, 1125, brick, 250, 0), new boundary(3000, 2000, 2800, 1500, brick, 250, 0),
-    new boundary(2800, 1500, 3500, 1900, brick, 250, 0), new boundary(3500, 1900, 3100, 2050, brick, 250, 0), new boundary(3100, 2050, 3400, 2500, brick, 250, 0), new boundary(3400, 2500, 4000, 2500, brick, 250, 0),
-    new boundary(4000, 2500, 4300, 2100, brick, 250, 0), new boundary(4300, 2100, 3900, 1600, brick, 250, 0), new boundary(3900, 1600, 3650, 1600, brick, 250, 0), new boundary(3650, 1600, 3700, 1000, brick, 250, 0),
-    new boundary(3700, 1000, 3000, 900, brick, 250, 0), new boundary(3700, 1000, 3000, 1200, brick, 250, 0)
+    new boundary(0, 0, 1000, 0, tallWall, 500, 0), new boundary(1000, 0, 1000, 1000, tallWall, 50, 0), new boundary(1000, 1000, 0, 1000, tallWall, 500, 0),
+    new boundary(0, 1000, 0, 0, tallWall, 500, 0), new boundary(10000, 500, 500, 500, tallWall, 475, 25), new boundary(1000, 0, 1000, 500, tallWall, 500, 0),
+    new boundary(1500, 0, 1500, 1000, tallWall, 50, 50)
+    // new boundary(500, 500, 2500, 500, tallWall, 250, 0), new boundary(2500, 500, 2500, 1000, brick, 250, 0), new boundary(2500, 1000, 1500, 1250, brick, 250, 0),
+    // new boundary(2500, 1000, 3000, 900, brick, 250, 0), new boundary(3000, 2000, 2500, 2500, brick, 250, 0), new boundary(2000, 2500, 800, 2200, brick, 250, 0), new boundary(800, 2200, 500, 500, brick, 250, 0),
+    // new boundary(2500, 2500, 2500, 3000, brick, 250, 0), new boundary(2500, 3000, 3000, 3250, brick, 250, 0), new boundary(3000, 3250, 2500, 3500, brick, 250, 0), new boundary(2500, 3500, 2000, 3400, brick, 250, 0),
+    // new boundary(2000, 3400, 800, 2200, brick, 250, 0), new boundary(1500, 1250, 1800, 1400, brick, 250, 0), new boundary(1800, 1400, 2000, 1125, brick, 250, 0), new boundary(3000, 2000, 2800, 1500, brick, 250, 0),
+    // new boundary(2800, 1500, 3500, 1900, brick, 250, 0), new boundary(3500, 1900, 3100, 2050, brick, 250, 0), new boundary(3100, 2050, 3400, 2500, brick, 250, 0), new boundary(3400, 2500, 4000, 2500, brick, 250, 0),
+    // new boundary(4000, 2500, 4300, 2100, brick, 250, 0), new boundary(4300, 2100, 3900, 1600, brick, 250, 0), new boundary(3900, 1600, 3650, 1600, brick, 250, 0), new boundary(3650, 1600, 3700, 1000, brick, 250, 0),
+    // new boundary(3700, 1000, 3000, 900, brick, 250, 0), new boundary(3700, 1000, 3000, 1200, brick, 250, 0)
   ],[
-    new floor(1000, 1000, 300, 0, 500, 0, brick, {}),
-    new floor(700, 2000, 1150, 0, 1000, 0, brick, {}),
-    new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, brick, {}),
-    new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
-    new floor(1000, 1000, 300, 250, 500, 0, brick, {})
+    new floor(1000, 1000, 500, 0, 500, 0, tallWall, {}),
+    new floor(1000, 1000, 1500, 50, 500, 0, tallWall, {}),
+    new floor(1000, 1000, 2000, 100, 500, 0, tallWall, {})
+    // new floor(1000, 1000, 300, 0, 500, 0, brick, {}),
+    // new floor(700, 2000, 1150, 0, 1000, 0, brick, {}),
+    // new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, brick, {}),
+    // new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
+    // new floor(1000, 1000, 300, 250, 500, 0, brick, {}), new floor(500, 500, 1000, 50, 1000, 0, tallWall, {}),
+    // new floor(500, 500, 900, 100, 1500, 45, tallWall, {})
   ],[
-    new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, [], 0), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, [], 1),
-    new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, [], 2), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, [], 3),
-    new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', 
-    [1, 0, 0, 0], 4
-      )
+    //new entity(750, 0, 500, green, 75, 175, false, [], 0, {}),
+    new entity(250, 0, 500, purple, 75, 175, false, [], 1, {canCollide: false})
+    // new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, [], 0), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, [], 1),
+    // new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, [], 2), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, [], 3),
+    // new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', [1, 0, 0, 0], 4), new entity(2000, 0, 3100, impSpritesheet, 50, 175, false, [], 5)
   ],[
-    new ai(3600, 0, 2000, 0, 5, 50, 0, 'h', defSword, 50), new ai(1500, 0, 1000, 0, 5, 50, 1, 'h', defSword, 50),
-    new ai(3700, 0, 2100, 0, 5, 50, 2, 'h', defSword, 50), new ai(2000, 0, 3000, 0, 5, 50, 3, 'h', defSword, 50)//, new ai(2000, 0, 2000, 0, 4, 50, 1, 'h', 4)
+    new ai(750, 0, 250, 0, 4, 100, 0, 'h', nmeSword, 50)
+    // new ai(3600, 0, 2000, 0, 5, 50, 0, 'h', nmeSword, 50), new ai(1500, 0, 1000, 0, 5, 50, 1, 'h', nmeSword, 50),
+    // new ai(3700, 0, 2100, 0, 5, 50, 2, 'h', nmeSword, 50), new ai(2000, 0, 3000, 0, 5, 50, 3, 'h', nmeSword, 50),
+    // new ai(1000, 0, 2001, 0, 5, 50, 5, 'h', nmeSword, 50)//, new ai(2000, 0, 2000, 0, 4, 50, 1, 'h', 4) 
   ],[
-    new pathNode(1000, 1000, [1, 2, 3], 'a'), new pathNode(2000, 800, [0], 'b'), 
-    new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
-    new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
-    new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
+    new pathNode(250, 250, [1], 'a'), new pathNode(250, 750, [0, 2, 3], 'b'), new pathNode(1750, 750, [1, 3], 'c'), new pathNode(1250, 750, [1, 2], 'd')
+    // new pathNode(1000, 1000, [1, 2, 3], 'a'), new pathNode(2000, 800, [0], 'b'), 
+    // new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
+    // new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
+    // new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
   ])
   for (let i = 0; i < testCell.objects.length; i++){
     testCell.objects[i].ogIndex = i
@@ -1009,13 +1069,13 @@ function setup() {
     new boundary(3700, 1000, 3000, 1200, brick, 250, 0)
   ],[
     new floor(1000, 1000, 300, 0, 500, 0, brick, {}),
-    new floor(700, 2000, 1150, 0, 1000, 0, brick, {}),
+    new floor(700, 2000, 1150, 0, 1000, 0, brick, {})
     // new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, brick, {}),
     // new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
     // new floor(1000, 1000, 300, 250, 500, 0, brick, {})
   ],[
     new entity(1000, 0, -100, impSpritesheet, 50, 175, 'loadZone', 
-    [0, 1200, 0, 1500], 0
+    [0, 1200, 0, 1500], 0, {}
       ),
     new entity(500, 0, 1000, impSpritesheet, 50, 175, 'dialogue',
     [
@@ -1023,7 +1083,7 @@ function setup() {
       [['player response 1', 'player response 2'], ['npc reaction 1', 'npc reaction 2']],
       [['player response'], ['npc text line']],
       [['player final line'], ['never seen']]
-    ], 1
+    ], 1, {}
       )
   ],[
   ],[
@@ -1036,13 +1096,16 @@ function setup() {
     testCell2.objects[i].ogIndex = i
   }
   world = [testCell, testCell2]
+  for (let i of world){
+    i.floors.floorSort
+  }
   currentCell = testCell
   currentCellNo = 0
-  player = new pc(1200, 0, 1500, 175, 0, 0, 8, currentCell.floors[0], 100, defSword)
+  player = new pc(1920, 150, 920, 175, 0, 0, 8, currentCell.floors[0], 100, defSword, {})
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
-  cam.eyeY -= 17
+  cam.eyeY -= 175
   cam.centerZ += player.z
   cam.eyeZ += player.z
   uiCam.ortho()
@@ -1121,26 +1184,26 @@ function draw() {
         player.y += 3 * (30/frameRate())
         player.eyeLevel += 3 * (30/frameRate())
         jumpHeight += 3 * (30/frameRate())
-        if (jumpHeight >= 500){
+        if (jumpHeight >= 50){
           jumping = false
         }
       }
       else if (player.y > player.currentFloor.y){
-        player.y -= 3 * (30/frameRate())
-        cam.centerY += 3 * (30/frameRate())
-        cam.eyeY += 3 * (30/frameRate())
+        player.y -= 5 * (30/frameRate())
+        cam.centerY += 5 * (30/frameRate())
+        cam.eyeY += 5 * (30/frameRate())
         player.eyeLevel = player.y + player.height
         if (player.y <= player.currentFloor.y){
           jumpHeight = 0
-          player.y = player.currentFloor.y 
+          player.y = player.currentFloor.y
           //player.eyeLevel = player.y + player.height
           //cam.eyeY = -player.eyeLevel
           //cam.centerY = player.eyeLevel + tan(player.angleUD)
         }
       }
-      ui()
+      //ui()
       if (keyIsDown(113)){ //save
-        if (player.y > player.currentFloor.y){
+        if (player.y > player.currentFloor.y){ //necessary as saving in the air causes problems
           saveFailUI()
         }
         else{
@@ -1166,18 +1229,22 @@ function draw() {
       for (let i of currentCell.floors){
         i.render()
       }
+      currentCell.objects = currentCell.objects.sort(entitySort)
       for (let i of currentCell.objects){
         i.render()
       }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
       pauseUI()
       break
     case 'dialogue':
       for (let i of currentCell.walls){
         i.render()
       }
-      for (let i of currentCell.floors){
+      currentCell.objects = currentCell.objects.sort(entitySort)
+      for (let i of currentCell.objects){
         i.render()
       }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
       for (let i of currentCell.objects){
         i.render()
       }
@@ -1196,9 +1263,11 @@ function draw() {
       // for (let i of currentCell.AIs){
       //   i.fullPathfinding()
       // }
+      currentCell.objects = currentCell.objects.sort(entitySort)
       for (let i of currentCell.objects){
         i.render()
       }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
       inventoryUI()
     }
 }
@@ -1223,9 +1292,9 @@ function ui(){
     line(-10, -10, 10, 10)
     line(10, -10, -10, 10)
     if (player.interactCheck()[0]){
-      textSize(50)
+      textSize(20)
       fill(red)
-      text('(e) interact', 0, 0)
+      text('interact (e)', 0, 10)
     }
   pop()
 }
