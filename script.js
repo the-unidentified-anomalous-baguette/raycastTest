@@ -1136,8 +1136,8 @@ function setup() {
     // new floor(1000, 1000, 300, 250, 500, 0, brick, {}), new floor(500, 500, 1000, 50, 1000, 0, tallWall, {}),
     // new floor(500, 500, 900, 100, 1500, 45, tallWall, {})
   ],[
-    //new entity(750, 0, 500, green, 75, 175, false, [], 0, {}),
-    new entity(250, 0, 500, purple, 75, 175, 'loot', [], 1, new inventory([nmeSword], [defArmour], []), {canCollide: false})
+    new entity(250, 0, 500, purple, 75, 175, 'loot', [], 1, new inventory([nmeSword], [defArmour], []), {canCollide: false}),
+    new entity(750, 0, 500, green, 75, 175, 'loadZone', [1, 1200, 0, 1500], 0, new inventory([], [], []), {})
     // new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, [], 0), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, [], 1),
     // new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, [], 2), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, [], 3),
     // new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', [1, 0, 0, 0], 4), new entity(2000, 0, 3100, impSpritesheet, 50, 175, false, [], 5)
@@ -1171,10 +1171,10 @@ function setup() {
     // new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
     // new floor(1000, 1000, 300, 250, 500, 0, brick, {})
   ],[
-    new entity(1000, 0, -100, impSpritesheet, 50, 175, 'loadZone', 
-    [0, 1200, 0, 1500], 0, new inventory([], [], []), {}
-      ),
-    new entity(500, 0, 1000, impSpritesheet, 50, 175, 'dialogue',
+    // new entity(1000, 0, -100, impSpritesheet, 50, 175, 'loadZone', 
+    // [0, 1200, 0, 1500], 0, new inventory([], [], []), {}
+    //   ),
+    new entity(1000, 0, 1000, purple, 50, 175, 'dialogue',
     [
       [['never seen'], ['beginning dialogue']],
       [['player response 1', 'player response 2'], ['npc reaction 1', 'npc reaction 2']],
@@ -1335,6 +1335,9 @@ function draw() {
       break
     case 'dialogue':
       for (let i of currentCell.walls){
+        i.render()
+      }
+      for (let i of currentCell.floors){
         i.render()
       }
       currentCell.objects = currentCell.objects.sort(entitySort)
