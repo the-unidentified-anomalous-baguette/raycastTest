@@ -36,38 +36,51 @@ function universalSwitch(event, {data = null}){
       requestPointerLock() 
       break
     case 'eqp1':
-      player.inventory.weapons.push(player.hotbar[0])
+      if (player.hotbar[0] != punch){
+        player.inventory.weapons.push(player.hotbar[0])
+      }
       player.hotbar[0] = data
       player.inventory.weapons.splice(player.inventory.weapons.indexOf(data), 1)
       hotbarSelect = false
-      console.log('item moved')
       break
     case 'eqp2':
-      player.inventory.weapons.push(player.hotbar[1])
+      if (player.hotbar[1] != punch){
+        player.inventory.weapons.push(player.hotbar[1])
+      }
       player.hotbar[1] = data
       player.inventory.weapons.splice(player.inventory.weapons.indexOf(data), 1)
       hotbarSelect = false
       break
     case 'eqp3':
-      player.inventory.weapons.push(player.hotbar[2])
+      if (player.hotbar[2] != punch){
+        player.inventory.weapons.push(player.hotbar[2])
+      }
       player.hotbar[2] = data
       player.inventory.weapons.splice(player.inventory.weapons.indexOf(data), 1)
       hotbarSelect = false
       break
     case 'eqp4':
-      player.inventory.weapons.push(player.hotbar[3])
+      if (player.hotbar[3] != punch){
+        player.inventory.weapons.push(player.hotbar[3])
+      }
       player.hotbar[3] = data
       player.inventory.weapons.splice(player.inventory.weapons.indexOf(data), 1)
       hotbarSelect = false
       break
+    case 'unequip':
+      if (data[0] != punch){
+        player.hotbar[data[1]] = punch
+        player.inventory.weapons.push(data[0])
+      }
+      break
     case 'giveWpn':
-
+      player.inventory.weapons.push(data)
       break
     case 'giveRmr':
-
+      player.inventory.apparels.push(data)
       break
     case 'givePot':
-
+      player.inventory.usables.push(data)
       break
     case 'moveToHotbar':
       hotbarSelect = true
@@ -78,8 +91,28 @@ function universalSwitch(event, {data = null}){
     case 'usePot':
       universalSwitch(data)
       break
+    case 'exitInv':
+      if (droppedInv.weapons.length >= 1 || droppedInv.apparels.length >= 1 || droppedInv.usables.length >= 1){
+        currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 8, 8, 'loot', 'delOnEmpty', 0, droppedInv, {canCollide: false}))
+        currentCell.objects[currentCell.objects.length - 1].ogIndex = currentCell.objects.length - 1
+      }
+      droppedInv = new inventory([], [], [])
+      gameState = 'game'
+      requestPointerLock()
+      break
     case 'heal25':
       player.hp += 25
+      break
+    case 'scrollUp':
+      if (invOffset >= 1){
+        invOffset -= 1
+      }
+      break
+    case 'scrollDown':
+      if (invOffset < Math.floor((player.inventory.weapons.length - 1)/5)|| invOffset < Math.floor(player.inventory.apparels.length/5) || invOffset < Math.floor(player.inventory.usables.length/5)){
+        invOffset += 1
+      }
+      console.log('down pressed')
       break
   }
 }
@@ -129,7 +162,7 @@ class menuButton{
 }
 
 class pc{
-  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor, hp, weapon, {xp = 0, level = 0}){
+  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor, hp, weapon, armour, {xp = 0, level = 0}){
     this.x = x
     this.y = y
     this.z = z
@@ -143,6 +176,7 @@ class pc{
     this.maxHp = hp
     this.def = 0
     this.weapon = weapon
+    this.armour = armour
     this.attacking = false
     this.attackFrame = 0
     this.inventory = new inventory([], [], [])
@@ -333,10 +367,15 @@ class pc{
         this.eyeLevel = this.y + this.height
       }
     }
-    if (keyIsDown(73) && this.attackFrame == 0){
+    if (this.y == this.currentFloor.y){
+      jumpHeight = 0
+    }
+    if (keyIsDown(73) && this.attackFrame == 0){ //i for inventory
       exitPointerLock()
       hotbarSelect = false
       gameState = 'inventory'
+      droppedInv = new inventory([], [], [])
+      invOffset = 0
     }
     if (this.xp >= 100){
       this.level += 1
@@ -350,8 +389,8 @@ class pc{
     let x2 = this.x + 200*sin(this.angleLR)
     let z2 = this.z - 200*cos(this.angleLR)
 
-    for (let i of currentCell.objects){
-      if (i.interactible != false){
+    for (let i of currentCell.objects){ //check every entity
+      if (i.interactible != false && player.y <= i.y + i.height && player.y + player.height >= i.y){
         let x3 = i.x - (i.collWidth/2)*cos(this.angleLR)
         let z3 = i.z - (i.collWidth/2)*sin(this.angleLR)
         let x4 = i.x + (i.collWidth/2)*cos(this.angleLR)
@@ -359,12 +398,23 @@ class pc{
         let den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
         let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
         let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-        if (0 <= t && t <= 1 && 0 <= u && u <= 1){
-          return [true, i]
+        if (0 <= t && t <= 1 && 0 <= u && u <= 1){ //if player looking at entity
+          for (let j of currentCell.walls){ //check if no walls in the way
+            x3 = j.x1
+            x4 = j.x2
+            z3 = z.z1
+            z4 = z.z2
+            den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+            t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+            u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+            if (0 <= t && t <= 1 && 0 <= u && u <= 1){
+              return [true, i] //tell program which entity was interacted with
+            }
+          }
         }
       }
     }
-    return [false, false]
+    return [false, false] //if no valid interaction found
   }
 
   attackCheck(){
@@ -409,8 +459,7 @@ class boundary{
 
   render(){
     push()
-    //texture(this.texture)
-    fill(red)
+    texture(this.texture)
     translate(this.midX, this.midY, this.midZ + 500)
     rotateY(this.angle)
     plane(this.width, this.height)
@@ -436,8 +485,7 @@ class floor{
 
   render(){
     push()
-    //texture(this.texture)
-    fill(grey)
+    texture(this.texture)
     translate(this.x, -this.y, this.z + 500)
     rotateX(90)
     rotateZ(this.rotation)
@@ -460,10 +508,9 @@ class entity{
     this.x = x
     this.y = y
     this.z = z
-    this.spriteSheet = spriteSheet
-    // this.spriteSheet = spriteSheet.image
-    // this.sWidth = spriteSheet.sWidth
-    // this.sHeight = spriteSheet.sHeight
+    this.spriteSheet = spriteSheet.image
+    this.sWidth = spriteSheet.sWidth
+    this.sHeight = spriteSheet.sHeight
     this.collWidth = collWidth
     this.height = height
     this.midVert = - (y + (height/2))
@@ -489,53 +536,52 @@ class entity{
       spriteAngle += 8
     }
     push()
-    fill(this.spriteSheet)
     translate(this.x, this.midVert, this.z + 500)
     rotateY(360 - player.angleLR)
-    rect(0, 0, this.collWidth, this.height)
-    // switch (this.animation) {
-    //   case 'i':
-    //     image(this.spriteSheet,
-    //       -this.collWidth / 2, -this.height / 2,
-    //       this.collWidth, this.height,
-    //       this.sWidth * spriteAngle, 0,
-    //       this.sWidth, this.sHeight
-    //     )
-    //     break
-    //   case 'w':
-    //     image(this.spriteSheet,
-    //       -this.collWidth/2, -this.height/2,
-    //       this.collWidth, this.height,
-    //       Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1),
-    //       this.sWidth, this.sHeight
-    //     )
-    //     if (gameState == 'game'){
-    //       this.frame += 0.2
-    //       if (this.frame >= 4) {
-    //         this.frame = 0
-    //       }
-    //     }
-    //     break
-    //   case 'a':
-    //     image(this.spriteSheet,
-    //       -this.collWidth/2, -this.height/2,
-    //       this.collWidth, this.height,
-    //       this.sWidth * (spriteAngle + 5), this.sHeight * (2 + Math.floor(this.frame)),
-    //       this.sWidth, this.sHeight
-    //      )
-    //     break
-    //   case 'd':
-    //     image(this.spriteSheet,
-    //       -this.collWidth / 2, -this.height / 2,
-    //       this.collWidth, this.height,
-    //       this.sWidth * (Math.floor(this.frame) + 5), this.sHeight,
-    //       this.sWidth, this.sHeight
-    //     )
-    //     if (this.frame < 4) {
-    //       this.frame += 0.6
-    //     }
-    //     break
-    //   }
+    fill(purple)
+    switch (this.animation) {
+      case 'i':
+        image(this.spriteSheet,
+          -this.collWidth / 2, -this.height / 2,
+          this.collWidth, this.height,
+          this.sWidth * spriteAngle, 0,
+          this.sWidth, this.sHeight
+        )
+        break
+      case 'w':
+        image(this.spriteSheet,
+          -this.collWidth/2, -this.height/2,
+          this.collWidth, this.height,
+          Math.floor(this.frame) * this.sWidth, this.sHeight * (spriteAngle + 1),
+          this.sWidth, this.sHeight
+        )
+        if (gameState == 'game'){
+          this.frame += 0.2
+          if (this.frame >= 4) {
+            this.frame = 0
+          }
+        }
+        break
+      case 'a':
+        image(this.spriteSheet,
+          -this.collWidth/2, -this.height/2,
+          this.collWidth, this.height,
+          this.sWidth * (spriteAngle + 5), this.sHeight * (2 + Math.floor(this.frame)),
+          this.sWidth, this.sHeight
+         )
+        break
+      case 'd':
+        image(this.spriteSheet,
+          -this.collWidth / 2, -this.height / 2,
+          this.collWidth, this.height,
+          this.sWidth * (Math.floor(this.frame) + 5), this.sHeight,
+          this.sWidth, this.sHeight
+        )
+        if (this.frame < 7) {
+          this.frame += 0.6
+        }
+        break
+      }
     if(this.animation != 'd'){
       fill(red)
       rect(0, (-this.height/2) - 5, this.collWidth * (this.hp / this.maxHp), 5)
@@ -850,7 +896,7 @@ class ai{
         let rottedX = (relX * cos(i.rotation)) + (relZ * sin(i.rotation))
         // AI coords rotated to align with the tested floor tile
         let rottedZ = -(relX * sin(i.rotation)) + (relZ * cos(i.rotation))
-        if (collideRectCircle(i.unrotX1, i.unrotZ1, i.width1, i.width2, rottedX, rottedZ, currentCell.objects[this.linkedNtt].collWidth)){ // checking if AI is on the tile
+        if (collideRectCircle(i.unrotX1, i.unrotZ1, i.width1, i.width2, rottedX, rottedZ, currentCell.objects[this.linkedNtt].collWidth/2)){ // checking if AI is on the tile
           finalY = i.y // sets the floor the AI stands on
         }
       }
@@ -861,32 +907,33 @@ class ai{
 }
 
 class cell{
-  constructor(walls, floors, objects, AIs, grid){
+  constructor(walls, floors, objects, AIs, grid, dialogueBg){
     this.walls = walls
     this.floors = floors
     this.objects = objects
     this.AIs = AIs
     this.grid = grid
+    this.dialogueBg = dialogueBg
   }
 }
 
 class weapon{
-  constructor(name, damage, spriteSheet, aF, dF, spriteSizes){
+  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon){
     this.damage = damage
     this.spriteSheet = spriteSheet
     this.aF = aF
     this.dF = dF
     this.spriteSizes = spriteSizes
     this.name = name
-    this.type = 'weapon'
+    this.icon = icon
   }
 }
 
 class apparel{
-  constructor(name, defense){
+  constructor(name, defense, icon){
     this.defense = defense
     this.name = name
-    this.type = 'apparel'
+    this.icon = icon
   }
 }
 
@@ -894,7 +941,6 @@ class consumable{
   constructor(name, func){
     this.name = name
     this.func = func
-    this.type = 'consumable'
   }
 
   executeFunc({data = null}){
@@ -973,7 +1019,7 @@ function intersectCheck(l11, l12, l21, l22){
 }
 
 function saveGame(){
-  savedWorld = [new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, {xp: player.xp, level: player.level}),
+  savedWorld = [new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, player.armour, {xp: player.xp, level: player.level}),
     [], currentCellNo
    ]
   for (let i of world){
@@ -1034,13 +1080,24 @@ let font
 //spritesheets and images
 let impSprite
 let impSpritesheet
+let chibiSprite
+let chibiSpritesheet
+let droppedSprite
+let droppedSpritesheet
 let brick
 let tallWall
 let swordSprite
+let fistSprite
 let crossImg
 let beginButt
 let loadButt
-let fistSprite
+let upButton
+let downButton
+let swordIcon
+let swordIcon2
+let punchIcon
+let teeIcon
+let menuBg
 //more general?
 let gameState = 'menu'
 let mainMenuButts
@@ -1050,6 +1107,9 @@ let interactCheckVariable
 let talkDepth
 let talkOption
 let mouseWasPressed
+let droppedInv
+let entitiesToDelete
+let delIndex
 //cells
 let testCell
 let testCell2
@@ -1061,51 +1121,55 @@ let defSword
 let nmeSword
 //armour
 let defArmour
-//general
+//general! again!
 let world
 let savedWorld
 let loadButton
 let exitButton
-let chibiSprite
-let chibiSpritesheet
 let hotbarSelect
 let selectedWeapon
 let hotbarButts
+let invOffset
 
 function preload(){
   font = loadFont('COMIC.ttf')
   impSprite = loadImage('imp.png')
   chibiSprite = loadImage('chibiSprite.png')
+  droppedSprite = loadImage('droppedSprite.png')
   brick = loadImage('brickTemp.png')
   tallWall = loadImage('tallWall.png')
   swordSprite = loadImage('sword1.png')
+  fistSprite = loadImage('punch.png')
   beginButt = loadImage('beginButton.png')
   loadButt = loadImage('deathButton.png')
   crossImg =  loadImage('exitButton.png')
-  fistSprite = loadImage('punch.png')
+  upButton = loadImage('upButton.png')
+  downButton = loadImage('downButton.png')
+  swordIcon = loadImage('swordIcon.png')
+  swordIcon2 = loadImage('swordIcon2.png')
+  punchIcon = loadImage('punchIcon.png')
+  teeIcon = loadImage('armourIcon.png')
+  menuBg = loadImage('mainMenuUI.png')
 }
 
 function setup() {
   impSpritesheet = new spritesheet(impSprite, 42, 61)
   chibiSpritesheet = new spritesheet(chibiSprite, 44, 50)
-  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [])
-  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [])
-  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [])
-  defArmour = new apparel('default armour', 2)
+  droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
+  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon)
+  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [], swordIcon)
+  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2)
+  defArmour = new apparel('default armour', 2, teeIcon)
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
   textAlign(CENTER, CENTER)
   noStroke();
   rectMode(CENTER)
   mainMenuButts = [
-    new menuButton(-512, -5, 200, 60, 'beginGame', beginButt, 200, 60)
-  ]
-  hotbarButts = [
-    new menuButton(-404, -20, 40, 40, 'eqp1', crossImg, 64, 64), new menuButton(-148, -20, 40, 40, 'eqp2', crossImg, 64, 64),
-    new menuButton(108, -20, 40, 40, 'eqp3', crossImg, 64, 64), new menuButton(364, -20, 40, 40, 'eqp4', crossImg, 64, 64)
+    new menuButton(-83, -100, 166, 56, 'beginGame', beginButt, 166, 56)
   ]
   loadButton = new menuButton(-100, 100, 200, 60, 'load', loadButt, 200, 60)
-  exitButton = new menuButton(400, -200, 32, 32, 'beginGame', crossImg, 64, 64)
+  exitButton = new menuButton(400, -200, 32, 32, 'exitInv', crossImg, 64, 64)
   cam = createCamera();
   uiCam = createCamera();
   setCamera(cam)
@@ -1114,7 +1178,8 @@ function setup() {
     new boundary(10000, 500, 500, 500, tallWall, 475, 25), new boundary(1000, 0, 1000, 500, tallWall, 500, 0),
     new boundary(1500, 1000, 1500, 2000, tallWall, 50, 100), new boundary(1000, 1000, 1500, 1000, tallWall, 100, 0),
     new boundary(1500, 1000, 2000, 1000, tallWall, 150, 0), new boundary(2000, 500, 2000, 1000, tallWall, 200, 0),
-    new boundary(2000, 1000, 2500, 1000, tallWall, 50, 150)
+    new boundary(2000, 1000, 2500, 1000, tallWall, 50, 150), new boundary(1000, 1000, 1000, 2000, tallWall, 500, 0),
+    new boundary(1000, 2000, 2500, 2000, tallWall, 500, 0), new boundary(2500, 2000, 2500, 500, tallWall, 500, 0)
     // new boundary(500, 500, 2500, 500, tallWall, 250, 0), new boundary(2500, 500, 2500, 1000, brick, 250, 0), new boundary(2500, 1000, 1500, 1250, brick, 250, 0),
     // new boundary(2500, 1000, 3000, 900, brick, 250, 0), new boundary(3000, 2000, 2500, 2500, brick, 250, 0), new boundary(2000, 2500, 800, 2200, brick, 250, 0), new boundary(800, 2200, 500, 500, brick, 250, 0),
     // new boundary(2500, 2500, 2500, 3000, brick, 250, 0), new boundary(2500, 3000, 3000, 3250, brick, 250, 0), new boundary(3000, 3250, 2500, 3500, brick, 250, 0), new boundary(2500, 3500, 2000, 3400, brick, 250, 0),
@@ -1136,8 +1201,8 @@ function setup() {
     // new floor(1000, 1000, 300, 250, 500, 0, brick, {}), new floor(500, 500, 1000, 50, 1000, 0, tallWall, {}),
     // new floor(500, 500, 900, 100, 1500, 45, tallWall, {})
   ],[
-    new entity(250, 0, 500, purple, 75, 175, 'loot', [], 1, new inventory([nmeSword], [defArmour], []), {canCollide: false}),
-    new entity(750, 0, 500, green, 75, 175, 'loadZone', [1, 1200, 0, 1500], 0, new inventory([], [], []), {})
+    new entity(250, 0, 500, impSpritesheet, 75, 175, 'loot', '', 1, new inventory([nmeSword], [defArmour], []), {canCollide: false}),
+    new entity(750, 0, 500, chibiSpritesheet, 75, 175, 'loadZone', [1, 1200, 0, 1500], 0, new inventory([], [], []), {})
     // new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, [], 0), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, [], 1),
     // new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, [], 2), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, [], 3),
     // new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', [1, 0, 0, 0], 4), new entity(2000, 0, 3100, impSpritesheet, 50, 175, false, [], 5)
@@ -1153,7 +1218,7 @@ function setup() {
     // new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
     // new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
     // new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
-  ])
+  ], tallWall)
   for (let i = 0; i < testCell.objects.length; i++){
     testCell.objects[i].ogIndex = i
   }
@@ -1174,7 +1239,7 @@ function setup() {
     // new entity(1000, 0, -100, impSpritesheet, 50, 175, 'loadZone', 
     // [0, 1200, 0, 1500], 0, new inventory([], [], []), {}
     //   ),
-    new entity(1000, 0, 1000, purple, 50, 175, 'dialogue',
+    new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'dialogue',
     [
       [['never seen'], ['beginning dialogue']],
       [['player response 1', 'player response 2'], ['npc reaction 1', 'npc reaction 2']],
@@ -1188,7 +1253,7 @@ function setup() {
     new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
     new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
     new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
-  ])
+  ], tallWall)
   for (let i = 0; i < testCell2.objects.length; i++){
     testCell2.objects[i].ogIndex = i
   }
@@ -1198,7 +1263,7 @@ function setup() {
   }
   currentCell = testCell
   currentCellNo = 0
-  player = new pc(1920, 600, 1500, 175, 0, 0, 8, currentCell.floors[0], 100, 0, {})
+  player = new pc(1920, 600, 1500, 175, 0, 0, 8, currentCell.floors[0], 100, 0, defArmour, {})
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -1210,6 +1275,11 @@ function setup() {
   noStroke()
   saveGame()
   frameRate(30)
+  player.inventory.weapons.push(defSword)
+  player.inventory.weapons.push(defSword)
+  player.inventory.weapons.push(defSword)
+  player.inventory.weapons.push(defSword)
+  player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
@@ -1236,11 +1306,31 @@ function draw() {
         i.fullPathfinding()
       }
       currentCell.objects = currentCell.objects.sort(entitySort)
+      entitiesToRemove = []
       for (let i of currentCell.objects){
         i.render()
+        if (i.interactible == 'loot' && i.useData == 'delOnEmpty' && 
+        i.inventory.weapons.length == 0 && i.inventory.apparels.length == 0 && i.inventory.usables.length == 0){
+          delIndex = i.ogIndex
+          entitiesToRemove.push(i.ogIndex)
+          for (let j of currentCell.objects){
+            if (j.ogIndex > delIndex){
+              j.ogIndex -= 1
+            }
+          }
+        }
       }
+      entitiesToRemove.sort()
       currentCell.objects = currentCell.objects.sort(entityUnsort)
-      if (keyIsDown(69)){
+      if (entitiesToRemove.length >= 1){
+        for (let i = 0; i < entitiesToRemove.length; i++){
+          currentCell.objects.splice(entitiesToRemove[i], 1)
+          for (let j = i; j < entitiesToRemove.length; j++){
+            entitiesToRemove[j] -= 1
+          } 
+        }
+      }
+      if (keyIsDown(69)){ //interaction check
         interactCheckVariable = player.interactCheck()
         if (interactCheckVariable[0]){
           if (interactCheckVariable[1].interactible != 'loadZone'){
@@ -1248,6 +1338,8 @@ function draw() {
             talkDepth = 0
             talkOption = 0
             mouseWasPressed = true
+            invOffset = 0
+            droppedInv = new inventory([], [], [])
             exitPointerLock()
           }
           else {
@@ -1281,7 +1373,7 @@ function draw() {
         player.y += 3 * (30/frameRate())
         player.eyeLevel += 3 * (30/frameRate())
         jumpHeight += 3 * (30/frameRate())
-        if (jumpHeight >= 50){
+        if (jumpHeight >= 100){
           jumping = false
         }
       }
@@ -1392,10 +1484,8 @@ function draw() {
 }
 
 function ui(){
-  let hotbarPos = 
+  let hbHlPos = [-150, -110, 110, 150]
   push() // auto reverses changes
-    strokeWeight(0.1)
-    stroke(255)
     setCamera(uiCam) // switches cam
     uiCam.setPosition(0, 0, 0)
     fill(255, 0, 0)
@@ -1406,13 +1496,37 @@ function ui(){
       320, 180
       )
     rect(0, 250, 170 * player.hp/player.maxHp, 30)
-    rect(-110, 250, 30, 30)
+    fill(216, 158, 99)
     rect(-150, 250, 30, 30)
+    rect(-110, 250, 30, 30)
     rect(110, 250, 30, 30)
     rect(150, 250, 30, 30)
-    fill(0)
-    text(player.xp, 500, 250)
-    text(player.def, 500, 225)
+    image(player.hotbar[0].icon,
+      -165, 235,
+      30, 30,
+      0, 0,
+      64, 64)
+    image(player.hotbar[1].icon,
+      -125, 235,
+      30, 30,
+      0, 0,
+      64, 64)
+    image(player.hotbar[2].icon,
+      95, 235,
+      30, 30,
+      0, 0,
+      64, 64)
+    image(player.hotbar[3].icon,
+      135, 235,
+      30, 30,
+      0, 0,
+      64, 64)
+    fill(0, 0, 0, 0)
+    stroke(0)
+    strokeWeight(2)
+    rect(hbHlPos[player.weapon], 250, 40, 40)
+    strokeWeight(0.1)
+    stroke(255)
     strokeWeight(1)
     line(-10, -10, 10, 10)
     line(10, -10, -10, 10)
@@ -1428,6 +1542,7 @@ function menuUI(){
   push()
     setCamera(uiCam)
     uiCam.setPosition(0, 0, 50)
+    image(menuBg, -512, -288)
     for (let i of mainMenuButts){
       i.render()
       i.executeFunc({})
@@ -1455,12 +1570,27 @@ function dialogueUI(entity){
     setCamera(uiCam)
     uiCam.setPosition(0, 0, 50)
     noStroke()
-    fill(25, 25, 25, 170)
+    fill(216, 158, 99)
     rect(-256, 0, 400, 400)
     rect(256, 0, 400, 400)
+    fill(182, 132, 82)
+    rect(256, -50, 400, 100)
+    rect(256, 150, 400, 100)
+    image(
+      currentCell.dialogueBg, 
+      -451, -195,
+      390, 190
+      )
+    image(
+      entity.spriteSheet,
+      -451, -195,
+      390, 190,
+      entity.sWidth * 12, 0,
+      entity.sWidth, entity.sHeight
+      )
     textSize(25)
-    fill(255, 0, 0)
-    text(entity.useData[talkDepth][1][talkOption], -256, 0, 400, 400)
+    fill(0)
+    text(entity.useData[talkDepth][1][talkOption], -256, 100, 400, 200)
     for (let i = 0; i < entity.useData[talkDepth + 1][0].length; i++){
       text(entity.useData[talkDepth + 1][0][i], 256, 100 * (i-2) + 10, 400, 400)
     }
@@ -1498,17 +1628,28 @@ function saveFailUI(){
 }
 
 function inventoryUI(){
+  let hotbarButts = [
+    new menuButton(-320, 180, 40, 40, 'unequip', player.hotbar[0].icon, 64, 64), new menuButton(-120, 180, 40, 40, 'unequip', player.hotbar[1].icon, 64, 64),
+    new menuButton(80, 180, 40, 40, 'unequip', player.hotbar[2].icon, 64, 64), new menuButton(280, 180, 40, 40, 'unequip', player.hotbar[3].icon, 64, 64)
+  ]
+  let scrollButts = [new menuButton(-440, -215, 40, 40, 'scrollUp', upButton, 64, 64), new menuButton(-440, 140, 40, 40, 'scrollDown', downButton, 64, 64)]
   let weaponsButtons = []
-  for (let i = 0; i < player.inventory.weapons.length; i++){
-    weaponsButtons.push(new menuButton(-400, -175 + (20 * i), 800/3, 20, 'moveToHotbar', player.inventory.weapons[i], 64, 64))
+  if(player.inventory.weapons.length > invOffset * 5){
+    for (let i = invOffset * 5; i < player.inventory.weapons.length && i < (invOffset * 5) + 5; i++){
+      weaponsButtons.push(new menuButton(-400, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'moveToHotbar', player.inventory.weapons[i], 64, 64))
+    }
   }
   let apparelButtons = []
-  for (let i = 0; i < player.inventory.apparels.length; i++){
-    apparelButtons.push(new menuButton(-400/3, -175 + (20 * i), 800/3, 20, 'equipRmr', player.inventory.apparels[i], 64, 64))
+  if (player.inventory.apparels.length > invOffset * 5){
+    for (let i = invOffset * 5; i < player.inventory.apparels.length && i < (invOffset * 5) + 5; i++){
+      apparelButtons.push(new menuButton(-400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'equipRmr', player.inventory.apparels[i], 64, 64))
+    }
   }
   let usablesButtons = []
-  for (let i = 0; i < player.inventory.usables.length; i++){
-    usablesButtons.push(new menuButton(-400/3, -175 + (20 * i), 800/3, 20, 'usePot', player.inventory.usables[i], 64, 64))
+  if (player.inventory.usables.length > invOffset * 5){
+    for (let i = invOffset * 5; i < player.inventory.usables.length && i < (invOffset * 5) + 5; i++){
+      usablesButtons.push(new menuButton(-400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'usePot', player.inventory.usables[i], 64, 64))
+    }
   }
   push()
     setCamera(uiCam)
@@ -1519,22 +1660,40 @@ function inventoryUI(){
       320 * player.attackFrame, 0,
       320, 180
       )
-    fill(25, 25, 25, 170)
-    rect(0, 0, 800, 400)
-    fill(255, 0, 0)
+    fill(216, 158, 99)
+    rect(-800/3, 0, 800/3, 360)
+    rect(800/3, 0, 800/3, 360)
+    rect(0, -195, 800/3, 30)
+    fill(182, 132, 82)
+    rect(0, 0, 800/3, 360)
+    rect(-800/3, -195, 800/3, 30)
+    rect(800/3, -195, 800/3, 30)
     textSize(20)
+    fill(0)
     text('weapons', -800/3, -200)
     text('apparel', 0, -200)
     text('consumables', 800/3, -200)
+    textAlign(LEFT, TOP)
     for (let i of weaponsButtons){
-      text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
+      fill(255)
+      rect(-384, i.collY + 16, 32, 32)
+      image(i.spriteSheet.icon, -400, i.collY, 32, 32, 0, 0, 64, 64)
+      fill(0)
+      text(i.spriteSheet.name, -366, i.collY)
+      text('dmg: ' + i.spriteSheet.damage, -400, i.collY + 34)
       if (i.checkHovered() && mouseIsPressed && hotbarSelect == false){
         selectedWeapon = i.spriteSheet
         hotbarSelect = true
       }
     }
     for (let i of apparelButtons){
-      text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
+      console.log(i)
+      fill(255)
+      rect(-352/3, i.collY + 16, 32, 32)
+      image(i.spriteSheet.icon, -400/3, i.collY, 32, 32, 0, 0, 64, 64)
+      fill(0)
+      text(i.spriteSheet.name, -298/3, i.collY)
+      text('def: ' + i.spriteSheet.defense, -400/3, i.collY + 34)
       if (i.checkHovered() && mouseIsPressed && hotbarSelect == false){
         player.def = i.spriteSheet.defense
       }
@@ -1542,7 +1701,21 @@ function inventoryUI(){
     for (let i of usablesButtons){
       text(i.spriteSheet.name, i.collx + (i.w/2), i.collY)
     }
-    if (keyIsDown(81)){
+    for(let i = 0; i < hotbarButts.length; i++){
+      let j = hotbarButts[i]
+      fill(216, 158, 99)
+      rect(j.transX, j.transY, 40, 40)
+      image(j.spriteSheet, j.collX, j.collY, 40, 40)
+      if (hotbarSelect == false){
+        hotbarButts[i].executeFunc({data: [player.hotbar[i], i]})
+      }
+    }
+    for (let i of scrollButts){
+      i.render()
+      i.executeFunc({})
+    }
+    if (keyIsDown(81) && player.inventory.weapons.length >= 1){
+      droppedInv.weapons.push(player.inventory.weapons[0])
       player.inventory.weapons.shift()
     }
     exitButton.render()
@@ -1554,17 +1727,18 @@ function inventoryUI(){
 }
 
 function lootUI(lootee){
+  let scrollButts = [new menuButton(-440, -215, 40, 40, 'scrollUp', upButton, 64, 64), new menuButton(-440, 140, 40, 40, 'scrollDown', downButton, 64, 64)]
   let weaponsButtons = []
-  for (let i = 0; i < lootee.inventory.weapons.length; i++){
-    weaponsButtons.push(new menuButton(-400, -175 + (20 * i), 800/3, 20, 'giveWpn', lootee.inventory.weapons[i], 64, 64))
+  for (let i = invOffset * 5; i < lootee.inventory.weapons.length && i < (invOffset * 5) + 5; i++){
+    weaponsButtons.push(new menuButton(-400, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'giveWpn', lootee.inventory.weapons[i], 64, 64))
   }
   let apparelButtons = []
-  for (let i = 0; i < lootee.inventory.apparels.length; i++){
-    apparelButtons.push(new menuButton(-400/3, -175 + (20 * i), 800/3, 20, 'giveRmr', lootee.inventory.apparels[i], 64, 64))
+  for (let i = invOffset * 5; i < lootee.inventory.apparels.length && i < (invOffset * 5) + 5; i++){
+    apparelButtons.push(new menuButton(-400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'giveRmr', lootee.inventory.apparels[i], 64, 64))
   }
   let usablesButtons = []
-  for (let i = 0; i < lootee.inventory.usables.length; i++){
-    usablesButtons.push(new menuButton(-400/3, -175 + (20 * i), 800/3, 20, 'givePot', lootee.inventory.usables[i], 64, 64))
+  for (let i = invOffset * 5; i < lootee.inventory.usables.length && i < (invOffset * 5) + 5; i++){
+    usablesButtons.push(new menuButton(-400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'givePot', lootee.inventory.usables[i], 64, 64))
   }
   push()
     setCamera(uiCam)
@@ -1575,33 +1749,54 @@ function lootUI(lootee){
       320 * player.attackFrame, 0,
       320, 180
       )
-    fill(25, 25, 25, 170)
-    rect(0, 0, 800, 400)
-    fill(255, 0, 0)
+    fill(216, 158, 99)
+    rect(-800/3, 0, 800/3, 360)
+    rect(800/3, 0, 800/3, 360)
+    rect(0, -195, 800/3, 30)
+    fill(182, 132, 82)
+    rect(0, 0, 800/3, 360)
+    rect(-800/3, -195, 800/3, 30)
+    rect(800/3, -195, 800/3, 30)
     textSize(20)
+    fill(0)
     text('weapons', -800/3, -200)
     text('apparel', 0, -200)
     text('consumables', 800/3, -200)
+    textAlign(LEFT, TOP)
     for (let i of weaponsButtons){
-      text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
-      if (i.checkHovered() && mouseIsPressed){
-        player.inventory.weapons.push(i.spriteSheet)
+      fill(255)
+      rect(-384, i.collY + 16, 32, 32)
+      image(i.spriteSheet.icon, -400, i.collY, 32, 32, 0, 0, 64, 64)
+      fill(0)
+      text(i.spriteSheet.name, -366, i.collY)
+      text('dmg: ' + i.spriteSheet.damage, -400, i.collY + 34)
+      if (i.checkHovered() && mouseIsPressed && !mouseWasPressed){
         lootee.inventory.weapons.splice(weaponsButtons.indexOf(i), 1)
+        player.inventory.weapons.push(i)
       }
     }
     for (let i of apparelButtons){
-      text(i.spriteSheet.name, i.collX + (i.w/2), i.collY)
-      if (i.checkHovered() && mouseIsPressed){
-        player.inventory.apparels.push(i.spriteSheet)
+      fill(255)
+      rect(-352/3, i.collY + 16, 32, 32)
+      image(i.spriteSheet.icon, -400/3, i.collY, 32, 32, 0, 0, 64, 64)
+      fill(0)
+      text(i.spriteSheet.name, -298/3, i.collY)
+      text('def: ' + i.spriteSheet.defense, -400/3, i.collY + 34)
+      if (i.checkHovered() && mouseIsPressed && !mouseWasPressed){
         lootee.inventory.apparels.splice(apparelButtons.indexOf(i), 1)
+        player.inventory.apparels.push(i.spriteSheet)
       }
     }
     for (let i of usablesButtons){
       text(i.spriteSheet.name, i.collx + (i.w/2), i.collY)
-      if (i.checkHovered() && mouseIsPressed){
-        player.inventory.usables.push(i.spriteSheet)
+      if (i.checkHovered() && mouseIsPressed && !mouseWasPressed){
         lootee.inventory.usables.splice(usablesButtons.indexOf(i), 1)
+        player.inventory.usables.push(i.spriteSheet)
       }
+    }
+    for (let i of scrollButts){
+      i.render()
+      i.executeFunc({})
     }
     exitButton.render()
     exitButton.executeFunc({})
@@ -1609,6 +1804,10 @@ function lootUI(lootee){
 }
 
 function hotbarUI(weapon){
+  let hotbarButts = [
+    new menuButton(-404, -20, 40, 40, 'eqp1', player.hotbar[0].icon, 64, 64), new menuButton(-148, -20, 40, 40, 'eqp2', player.hotbar[1].icon, 64, 64),
+    new menuButton(108, -20, 40, 40, 'eqp3', player.hotbar[2].icon, 64, 64), new menuButton(364, -20, 40, 40, 'eqp4', player.hotbar[3].icon, 64, 64)
+  ]
   for (let i of hotbarButts){
     i.render()
     i.executeFunc({data: weapon})
