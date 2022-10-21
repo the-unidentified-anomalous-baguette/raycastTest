@@ -2,6 +2,7 @@ let red = [200,10, 10]
 let green = [10, 200, 10]
 let grey = [150, 150, 150]
 let purple = [150, 10, 200]
+let dGrey = [30, 30, 30]
 
 //********************************************************************************************************************
 //* REMINDER TO MAKE THE UNIVERSAL ACTION SWITCH:                                                                    *
@@ -112,7 +113,6 @@ function universalSwitch(event, {data = null}){
       if (invOffset < Math.floor((player.inventory.weapons.length - 1)/5)|| invOffset < Math.floor(player.inventory.apparels.length/5) || invOffset < Math.floor(player.inventory.usables.length/5)){
         invOffset += 1
       }
-      console.log('down pressed')
       break
   }
 }
@@ -402,15 +402,16 @@ class pc{
           for (let j of currentCell.walls){ //check if no walls in the way
             x3 = j.x1
             x4 = j.x2
-            z3 = z.z1
-            z4 = z.z2
+            z3 = j.z1
+            z4 = j.z2
             den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
             t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
             u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
             if (0 <= t && t <= 1 && 0 <= u && u <= 1){
-              return [true, i] //tell program which entity was interacted with
+              return [false, false] //tell program which entity was interacted with
             }
           }
+          return [true, i]
         }
       }
     }
@@ -907,13 +908,14 @@ class ai{
 }
 
 class cell{
-  constructor(walls, floors, objects, AIs, grid, dialogueBg){
+  constructor(walls, floors, objects, AIs, grid, dialogueBg, fogColour){
     this.walls = walls
     this.floors = floors
     this.objects = objects
     this.AIs = AIs
     this.grid = grid
     this.dialogueBg = dialogueBg
+    this.fogColour = fogColour
   }
 }
 
@@ -1086,6 +1088,8 @@ let droppedSprite
 let droppedSpritesheet
 let brick
 let tallWall
+let stone
+let gravelled
 let swordSprite
 let fistSprite
 let crossImg
@@ -1111,8 +1115,8 @@ let droppedInv
 let entitiesToDelete
 let delIndex
 //cells
-let testCell
-let testCell2
+let cell1
+let cell2
 let currentCell
 let currentCellNo
 //weapons
@@ -1133,22 +1137,30 @@ let invOffset
 
 function preload(){
   font = loadFont('COMIC.ttf')
+  //entity spritesheets
   impSprite = loadImage('imp.png')
   chibiSprite = loadImage('chibiSprite.png')
   droppedSprite = loadImage('droppedSprite.png')
+  //walls and floors
   brick = loadImage('brickTemp.png')
   tallWall = loadImage('tallWall.png')
+  stone = loadImage('stone.png')
+  gravelled = loadImage('gravelled.png')
+  //weapons
   swordSprite = loadImage('sword1.png')
   fistSprite = loadImage('punch.png')
+  //buttons
   beginButt = loadImage('beginButton.png')
   loadButt = loadImage('deathButton.png')
   crossImg =  loadImage('exitButton.png')
   upButton = loadImage('upButton.png')
   downButton = loadImage('downButton.png')
+  //inventory icons
   swordIcon = loadImage('swordIcon.png')
   swordIcon2 = loadImage('swordIcon2.png')
   punchIcon = loadImage('punchIcon.png')
   teeIcon = loadImage('armourIcon.png')
+  //background images
   menuBg = loadImage('mainMenuUI.png')
 }
 
@@ -1173,97 +1185,39 @@ function setup() {
   cam = createCamera();
   uiCam = createCamera();
   setCamera(cam)
-  testCell = new cell([
-    new boundary(0, 0, 1000, 0, tallWall, 500, 0), new boundary(1000, 0, 1000, 1000, tallWall, 50, 0), new boundary(1000, 1000, 0, 1000, tallWall, 500, 0),
-    new boundary(10000, 500, 500, 500, tallWall, 475, 25), new boundary(1000, 0, 1000, 500, tallWall, 500, 0),
-    new boundary(1500, 1000, 1500, 2000, tallWall, 50, 100), new boundary(1000, 1000, 1500, 1000, tallWall, 100, 0),
-    new boundary(1500, 1000, 2000, 1000, tallWall, 150, 0), new boundary(2000, 500, 2000, 1000, tallWall, 200, 0),
-    new boundary(2000, 1000, 2500, 1000, tallWall, 50, 150), new boundary(1000, 1000, 1000, 2000, tallWall, 500, 0),
-    new boundary(1000, 2000, 2500, 2000, tallWall, 500, 0), new boundary(2500, 2000, 2500, 500, tallWall, 500, 0)
-    // new boundary(500, 500, 2500, 500, tallWall, 250, 0), new boundary(2500, 500, 2500, 1000, brick, 250, 0), new boundary(2500, 1000, 1500, 1250, brick, 250, 0),
-    // new boundary(2500, 1000, 3000, 900, brick, 250, 0), new boundary(3000, 2000, 2500, 2500, brick, 250, 0), new boundary(2000, 2500, 800, 2200, brick, 250, 0), new boundary(800, 2200, 500, 500, brick, 250, 0),
-    // new boundary(2500, 2500, 2500, 3000, brick, 250, 0), new boundary(2500, 3000, 3000, 3250, brick, 250, 0), new boundary(3000, 3250, 2500, 3500, brick, 250, 0), new boundary(2500, 3500, 2000, 3400, brick, 250, 0),
-    // new boundary(2000, 3400, 800, 2200, brick, 250, 0), new boundary(1500, 1250, 1800, 1400, brick, 250, 0), new boundary(1800, 1400, 2000, 1125, brick, 250, 0), new boundary(3000, 2000, 2800, 1500, brick, 250, 0),
-    // new boundary(2800, 1500, 3500, 1900, brick, 250, 0), new boundary(3500, 1900, 3100, 2050, brick, 250, 0), new boundary(3100, 2050, 3400, 2500, brick, 250, 0), new boundary(3400, 2500, 4000, 2500, brick, 250, 0),
-    // new boundary(4000, 2500, 4300, 2100, brick, 250, 0), new boundary(4300, 2100, 3900, 1600, brick, 250, 0), new boundary(3900, 1600, 3650, 1600, brick, 250, 0), new boundary(3650, 1600, 3700, 1000, brick, 250, 0),
-    // new boundary(3700, 1000, 3000, 900, brick, 250, 0), new boundary(3700, 1000, 3000, 1200, brick, 250, 0)
-  ],[
-    new floor(1000, 1000, 500, 0, 500, 0, tallWall, {}),
-    new floor(1000, 1000, 1500, 50, 500, 0, tallWall, {}),
-    new floor(1000, 1000, 1500, 100, 1500, 0, tallWall, {}),
-    //new floor(1000, 1000, 2000, 500, 500, 0, tallWall, {}),
-    new floor(1000, 1000, 2000, 150, 1500, 0, tallWall, {}),
-    new floor(500, 500, 2250, 200, 750, 0, tallWall, {})
-    // new floor(1000, 1000, 300, 0, 500, 0, brick, {}),
-    // new floor(700, 2000, 1150, 0, 1000, 0, brick, {}),
-    // new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, brick, {}),
-    // new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
-    // new floor(1000, 1000, 300, 250, 500, 0, brick, {}), new floor(500, 500, 1000, 50, 1000, 0, tallWall, {}),
-    // new floor(500, 500, 900, 100, 1500, 45, tallWall, {})
-  ],[
-    new entity(250, 0, 500, impSpritesheet, 75, 175, 'loot', '', 1, new inventory([nmeSword], [defArmour], []), {canCollide: false}),
-    new entity(750, 0, 500, chibiSpritesheet, 75, 175, 'loadZone', [1, 1200, 0, 1500], 0, new inventory([], [], []), {})
-    // new entity(3600, 0, 2000, impSpritesheet, 50, 175, false, [], 0), new entity(1500, 0, 1000, impSpritesheet, 50, 175, false, [], 1),
-    // new entity(3700, 0, 2100, chibiSpritesheet, 50, 175, false, [], 2), new entity(2000, 0, 3000, impSpritesheet, 50, 175, false, [], 3),
-    // new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'loadZone', [1, 0, 0, 0], 4), new entity(2000, 0, 3100, impSpritesheet, 50, 175, false, [], 5)
-  ],[
-    new ai(750, 0, 250, 0, 4, 100, 0, 'h', nmeSword, 50)
-    // new ai(3600, 0, 2000, 0, 5, 50, 0, 'h', nmeSword, 50), new ai(1500, 0, 1000, 0, 5, 50, 1, 'h', nmeSword, 50),
-    // new ai(3700, 0, 2100, 0, 5, 50, 2, 'h', nmeSword, 50), new ai(2000, 0, 3000, 0, 5, 50, 3, 'h', nmeSword, 50),
-    // new ai(1000, 0, 2001, 0, 5, 50, 5, 'h', nmeSword, 50)//, new ai(2000, 0, 2000, 0, 4, 50, 1, 'h', 4) 
-  ],[
-    new pathNode(250, 250, [1], 'a'), new pathNode(250, 750, [0, 2], 'b'), new pathNode(1250, 750, [1, 3], 'c'), 
-    new pathNode(1250, 1500, [1, 2, 4], 'd'), new pathNode(2250, 1500, [3, 5], 'e'), new pathNode(2250, 750, [4], 'f')
-    // new pathNode(1000, 1000, [1, 2, 3], 'a'), new pathNode(2000, 800, [0], 'b'), 
-    // new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
-    // new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
-    // new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
-  ], tallWall)
-  for (let i = 0; i < testCell.objects.length; i++){
-    testCell.objects[i].ogIndex = i
-  }
-  testCell2 = new cell([
-    new boundary(2500, 1000, 3000, 900, brick, 250, 0), new boundary(3000, 2000, 2500, 2500, brick, 250, 0), new boundary(2000, 2500, 800, 2200, brick, 250, 0), new boundary(800, 2200, 500, 500, brick, 250, 0),
-    new boundary(2500, 2500, 2500, 3000, brick, 250, 0), new boundary(2500, 3000, 3000, 3250, brick, 250, 0), new boundary(3000, 3250, 2500, 3500, brick, 250, 0), new boundary(2500, 3500, 2000, 3400, brick, 250, 0),
-    new boundary(2000, 3400, 800, 2200, brick, 250, 0), new boundary(1500, 1250, 1800, 1400, brick, 250, 0), new boundary(1800, 1400, 2000, 1125, brick, 250, 0), new boundary(3000, 2000, 2800, 1500, brick, 250, 0),
-    new boundary(2800, 1500, 3500, 1900, brick, 250, 0), new boundary(3500, 1900, 3100, 2050, brick, 250, 0), new boundary(3100, 2050, 3400, 2500, brick, 250, 0), new boundary(3400, 2500, 4000, 2500, brick, 250, 0),
-    new boundary(4000, 2500, 4300, 2100, brick, 250, 0), new boundary(4300, 2100, 3900, 1600, brick, 250, 0), new boundary(3900, 1600, 3650, 1600, brick, 250, 0), new boundary(3650, 1600, 3700, 1000, brick, 250, 0),
-    new boundary(3700, 1000, 3000, 1200, brick, 250, 0)
-  ],[
-    new floor(1000, 1000, 300, 0, 500, 0, brick, {}),
-    new floor(700, 2000, 1150, 0, 1000, 0, brick, {})
-    // new floor(509.9019513592785, 500, 1450 + 250*sin(78.69006752597979), 50, 1650 + (509.9019513592785/2)*cos(78.69006752597979), 78.69006752597979, brick, {}),
-    // new floor(200, 200, 1600, 100, 1550, 0, brick, {}),
-    // new floor(1000, 1000, 300, 250, 500, 0, brick, {})
-  ],[
-    // new entity(1000, 0, -100, impSpritesheet, 50, 175, 'loadZone', 
-    // [0, 1200, 0, 1500], 0, new inventory([], [], []), {}
-    //   ),
-    new entity(1000, 0, 1000, impSpritesheet, 50, 175, 'dialogue',
-    [
-      [['never seen'], ['beginning dialogue']],
-      [['player response 1', 'player response 2'], ['npc reaction 1', 'npc reaction 2']],
-      [['player response'], ['npc text line']],
-      [['player final line'], ['never seen']]
-    ], 1, new inventory([], [], []), {}
-      )
-  ],[
-  ],[
-    new pathNode(1000, 1000, [1, 2, 3], 'a'), new pathNode(2000, 800, [0], 'b'), 
-    new pathNode(1000, 2000, [0, 3, 4], 'c'), new pathNode(2000, 2000, [0, 2, 4, 5], 'd'), 
-    new pathNode(2500, 1250, [3, 2, 8, 5], 'e'), new pathNode(2250, 2700, [3, 6, 7, 4], 'f'), new pathNode(1400, 2600, [5, 7], 'g'),
-    new pathNode(2300, 3200, [5, 6], 'h'), new pathNode(3300, 1400, [4, 9], 'i'), new pathNode(3900, 2200, [8], 'j')
-  ], tallWall)
-  for (let i = 0; i < testCell2.objects.length; i++){
-    testCell2.objects[i].ogIndex = i
-  }
-  world = [testCell, testCell2]
+  cell1 = new cell([
+    //beginning room
+    new boundary(0, 2000, 250, 500, stone, 2000, 0), new boundary(250, 500, 2000, 0, stone, 2000, 0), new boundary(2000, 0, 4000, 0, stone, 2000, 0),
+    new boundary(4000, 0, 5000, 750, stone, 2000, 0), new boundary(5000, 750, 5000, 1500, stone, 1500, 500),
+    new boundary(5000, 1500, 4750, 2500, stone, 2000, 0), new boundary(4750, 2500, 3250, 4000, stone, 2000, 0), new boundary(3250, 4000, 1500, 4000, stone, 2000, 0),
+    new boundary(0, 2000, 1500, 4000, stone, 2000, 0), 
+    //first corridor
+    new boundary(5000, 750, 6500, 750, stone, 500, 0), new boundary(5000, 1500, 6000, 1500, stone, 500, 0), new boundary(6500, 750, 7500, 1750, stone, 550, -50),
+    new boundary(6000, 1500, 6875, 3000, stone, 550, -50),
+    // first corridor step edges
+    new boundary(6500, 750, 6500, 1500, gravelled, 50, -50), new boundary(6500, 1500, 6000, 1500, gravelled, 50, -50)
+  ], [
+    //beginning room
+    new floor(5000, 4000, 2500, 0, 2000, 0, gravelled, {}), new floor(5000, 4000, 2500, 2000, 2000, 180, stone, {}),
+    //first corridor
+    new floor(1500, 750, 5750, 0, 1125, 0, gravelled, {}), new floor(1500, 750, 5750, 500, 1125, 0, stone, {})
+  ], [
+
+  ], [
+
+  ], [
+
+  ], stone, dGrey)
+  world = [cell1]
   for (let i of world){
     i.floors.floorSort
+    for (let j of i.objects){
+      j.ogIndex = i.objects.indexOf(j)
+    }
   }
-  currentCell = testCell
+  currentCell = world[0]
   currentCellNo = 0
-  player = new pc(1920, 600, 1500, 175, 0, 0, 8, currentCell.floors[0], 100, 0, defArmour, {})
+  player = new pc(1375, 0, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -1283,11 +1237,13 @@ function setup() {
   player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
   player.inventory.weapons.push(defSword)
+  setAttributes('alpha', false);
 }
 
 function draw() {
-  player.speed = 8 * (30/frameRate())
+  player.speed = 20 * (30/frameRate())
   background(0)
+  noErase()
   switch (gameState){
     case 'menu':
       menuUI()
@@ -1305,29 +1261,30 @@ function draw() {
       for (let i of currentCell.AIs){
         i.fullPathfinding()
       }
-      currentCell.objects = currentCell.objects.sort(entitySort)
-      entitiesToRemove = []
-      for (let i of currentCell.objects){
-        i.render()
-        if (i.interactible == 'loot' && i.useData == 'delOnEmpty' && 
-        i.inventory.weapons.length == 0 && i.inventory.apparels.length == 0 && i.inventory.usables.length == 0){
-          delIndex = i.ogIndex
-          entitiesToRemove.push(i.ogIndex)
-          for (let j of currentCell.objects){
-            if (j.ogIndex > delIndex){
-              j.ogIndex -= 1
-            }
+      for (let i = 5000; i > 2400; i -= 200){
+        push()
+          fill(currentCell.fogColour[0], currentCell.fogColour[1], currentCell.fogColour[2], 100)
+          translate(player.x, player.eyeLevel, player.z)
+          sphere(i)
+        pop()
+        for (let j of currentCell.objects){
+          if (dist(j.x, j.z, player.x, player.z) < i && dist(j.x, j.z, player.x, player.z) >= i - 200){
+            j.render()
           }
         }
       }
-      entitiesToRemove.sort()
+      currentCell.objects = currentCell.objects.sort(entitySort)
+      for (let i of currentCell.objects){
+        if (dist(i.x, i.z, player.x, player.z) <= 2400){
+          i.render()
+        }
+      }
       currentCell.objects = currentCell.objects.sort(entityUnsort)
-      if (entitiesToRemove.length >= 1){
-        for (let i = 0; i < entitiesToRemove.length; i++){
-          currentCell.objects.splice(entitiesToRemove[i], 1)
-          for (let j = i; j < entitiesToRemove.length; j++){
-            entitiesToRemove[j] -= 1
-          } 
+      for (let i of currentCell.objects){
+        if (i.interactible == 'loot' && i.useData == 'delOnEmpty' && 
+        i.inventory.weapons.length == 0 && i.inventory.apparels.length == 0 && i.inventory.usables.length == 0){
+          currentCell.objects.splice(currentCell.objects.indexOf(i), 1)
+          break
         }
       }
       if (keyIsDown(69)){ //interaction check
@@ -1687,7 +1644,6 @@ function inventoryUI(){
       }
     }
     for (let i of apparelButtons){
-      console.log(i)
       fill(255)
       rect(-352/3, i.collY + 16, 32, 32)
       image(i.spriteSheet.icon, -400/3, i.collY, 32, 32, 0, 0, 64, 64)
