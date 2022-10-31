@@ -201,6 +201,22 @@ class pc{
     }
   }
 
+  ceilingCheck(){
+    for (let i of currentCell.floors){ // check every floor tile
+      if (i.y <= this.eyeLevel + 75 && i.y > player.eyeLevel){
+        let relX = this.x - i.x
+        let relZ = this.z - i.z
+        let rottedX = (relX * cos(i.rotation)) + (relZ * sin(i.rotation))
+        // player coords rotated to align with the tested floor tile
+        let rottedZ = -(relX * sin(i.rotation)) + (relZ * cos(i.rotation))
+        if (collideRectCircle(i.unrotX1, i.unrotZ1, i.width1, i.width2, rottedX, rottedZ, 150)){
+          // checking if player is on the tile
+          jumping = false// sets the floor the player stands on
+        }
+      }
+    }
+  }
+
   moveCheck(dir){
     let x3 = this.x
     let z3 = this.z
@@ -278,6 +294,9 @@ class pc{
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
       }
+    }
+    if (keyIsDown(88)){
+      console.log(player.x, player.y, player.z)
     }
     if (keyIsDown(83)){//s
       if(this.moveCheck('bw')){
@@ -995,7 +1014,7 @@ function floorSort(a, b){
     return 0
   }
   else {
-    return (a.y > b.y) ? -1 : 1
+    return (a.y < b.y) ? -1 : 1
   }
 }
 
@@ -1090,6 +1109,9 @@ let brick
 let tallWall
 let stone
 let gravelled
+let wideGravel
+let bark
+let trunk
 let swordSprite
 let fistSprite
 let crossImg
@@ -1146,6 +1168,9 @@ function preload(){
   tallWall = loadImage('tallWall.png')
   stone = loadImage('stone.png')
   gravelled = loadImage('gravelled.png')
+  wideGravel = loadImage('wideGravel.png')
+  bark = loadImage('bark.png')
+  trunk = loadImage('trunk.png')
   //weapons
   swordSprite = loadImage('sword1.png')
   fistSprite = loadImage('punch.png')
@@ -1192,15 +1217,32 @@ function setup() {
     new boundary(5000, 1500, 4750, 2500, stone, 2000, 0), new boundary(4750, 2500, 3250, 4000, stone, 2000, 0), new boundary(3250, 4000, 1500, 4000, stone, 2000, 0),
     new boundary(0, 2000, 1500, 4000, stone, 2000, 0), 
     //first corridor
-    new boundary(5000, 750, 6500, 750, stone, 500, 0), new boundary(5000, 1500, 6000, 1500, stone, 500, 0), new boundary(6500, 750, 7500, 1750, stone, 550, -50),
-    new boundary(6000, 1500, 6875, 3000, stone, 550, -50),
+    new boundary(5000, 750, 6500, 750, stone, 500, 0), new boundary(5000, 1500, 6000, 1500, stone, 500, 0), new boundary(6500, 750, 7500, 1750, stone, 700, -200),
+    new boundary(6000, 1500, 6875, 3000, stone, 700, -200), new boundary(6875, 3000, 8300, 3200, stone, 800, -300), new boundary(7500, 1750, 8800, 1800, stone, 800, -300),
+    new boundary(8300, 3200, 10500, 2500, stone, 700, -350), new boundary(9900, 980, 8800, 1800, stone, 700, -350),
+    new boundary(9900, 980, 9900, 480, stone, 700, -350),
     // first corridor step edges
-    new boundary(6500, 750, 6500, 1500, gravelled, 50, -50), new boundary(6500, 1500, 6000, 1500, gravelled, 50, -50)
+    new boundary(6500, 750, 6500, 1500, wideGravel, 50, -50), new boundary(6500, 1500, 6000, 1500, wideGravel, 50, -50),
+    new boundary(6195.337, 1845.513, 7104.663, 1320.513, wideGravel, 50, -100), new boundary(6352.513, 2201.041, 7201.041, 1352.513, wideGravel, 50, -150),
+    new boundary(6340.381, 2613.173, 7613.173, 1340.381, wideGravel, 50, -200), new boundary(6809.808, 3129.423, 7709.808, 1570.577, wideGravel, 50, -250),
+    new boundary(8050, 1700, 8050, 3500, wideGravel, 50, -300), new boundary(8800, 3250, 8800, 1750, wideGravel, 50, -350),
+    // first corridor ceiling edges
+    new boundary(8603.491, 327.431, 7577.431, 3146.509, stone, 50, 350), new boundary(6516.31, 821.074, 5671.074, 2633.69, stone, 100, 400),
+    // first corridor log
+    new boundary(10000, 2500, 10000, 1000, bark, 150, -350), new boundary(10150, 2500, 10150, 1000, bark, 150, -350), new boundary(10150, 2500, 10000, 2500, trunk, 150, -350),
+    new boundary(10000, 1000, 10150, 1000, trunk, 150, -350)
   ], [
     //beginning room
     new floor(5000, 4000, 2500, 0, 2000, 0, gravelled, {}), new floor(5000, 4000, 2500, 2000, 2000, 180, stone, {}),
     //first corridor
-    new floor(1500, 750, 5750, 0, 1125, 0, gravelled, {}), new floor(1500, 750, 5750, 500, 1125, 0, stone, {})
+    new floor(1500, 750, 5750, 0, 1125, 0, gravelled, {}), new floor(1000, 1050, 6400, -50, 1150, 60, gravelled, {}),
+    new floor(500, 1200, 6600, -100, 1600, 45, gravelled, {}), new floor(500, 1800, 6800, -150, 1800, 45, gravelled, {}),
+    new floor(600, 1800, 7000, -200, 2200, 30, gravelled, {}), new floor(1100, 1800, 7500, -250, 2600, 0, gravelled, {}),
+    new floor(750, 1500, 8425, -300, 2500, 0, gravelled, {}), new floor(2500, 1800, 9600, -350, 2000, -30, gravelled, {}),
+    new floor(1500, 150, 10075, -200, 1750, 90, bark, {}),
+    //first corridor ceilings
+    new floor(2300, 1200, 6150, 500, 1125, 0, stone, {}), new floor(3000, 3000, 9500, 350, 2250, 20, stone, {}),
+    new floor(2000, 2000, 7000, 400, 2150, 25, stone, {})
   ], [
 
   ], [
@@ -1210,7 +1252,7 @@ function setup() {
   ], stone, dGrey)
   world = [cell1]
   for (let i of world){
-    i.floors.floorSort
+    i.floors.sort(floorSort)
     for (let j of i.objects){
       j.ogIndex = i.objects.indexOf(j)
     }
@@ -1229,19 +1271,11 @@ function setup() {
   noStroke()
   saveGame()
   frameRate(30)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
-  player.inventory.weapons.push(defSword)
   setAttributes('alpha', false);
 }
 
 function draw() {
-  player.speed = 20 * (30/frameRate())
+  player.speed = 80 * (30/frameRate())
   background(0)
   noErase()
   switch (gameState){
@@ -1325,11 +1359,12 @@ function draw() {
         }
       }
       if (jumping){
-        cam.centerY -= 3 * (30/frameRate())
-        cam.eyeY -= 3 * (30/frameRate())
-        player.y += 3 * (30/frameRate())
-        player.eyeLevel += 3 * (30/frameRate())
-        jumpHeight += 3 * (30/frameRate())
+        player.ceilingCheck()
+        cam.centerY -= 5 * (30/frameRate())
+        cam.eyeY -= 5 * (30/frameRate())
+        player.y += 5 * (30/frameRate())
+        player.eyeLevel += 5 * (30/frameRate())
+        jumpHeight += 5 * (30/frameRate())
         if (jumpHeight >= 100){
           jumping = false
         }
