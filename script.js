@@ -3,12 +3,7 @@ let green = [10, 200, 10]
 let grey = [150, 150, 150]
 let purple = [150, 10, 200]
 let dGrey = [30, 30, 30]
-
-//********************************************************************************************************************
-//* REMINDER TO MAKE THE UNIVERSAL ACTION SWITCH:                                                                    *
-//* add the universal action switch to replace specific action switches for buttons, consumables, and other triggers *
-//* REMINDER END                                                                                                     *
-//********************************************************************************************************************
+let brown = [100, 50, 0]
 
 function universalSwitch(event, {data = null}){
   switch (event){
@@ -114,6 +109,16 @@ function universalSwitch(event, {data = null}){
         invOffset += 1
       }
       break
+    case 'scrollDownLore':
+      if (invOffset < Math.floor((loreShown.length - 1)/2)){
+        invOffset += 1
+      }
+      break
+    case 'loreTrigger':
+      gameState = 'lore'
+      loreShown = data
+      invOffset = 0
+      break
   }
 }
 
@@ -183,6 +188,7 @@ class pc{
     this.hotbar = [punch, punch, punch, punch]
     this.xp = xp
     this.level = level
+    this.statBlock = new statBlock(3, 3, 3, 3, 3)
   }
 
   floorCheck(){
@@ -295,7 +301,7 @@ class pc{
         this.z -= this.speed * cos(this.angleLR)
       }
     }
-    if (keyIsDown(88)){
+    if (keyIsDown(88)){//debug log player position
       console.log(player.x, player.y, player.z)
     }
     if (keyIsDown(83)){//s
@@ -403,13 +409,12 @@ class pc{
   }
 
   interactCheck(){
-    let x1 = this.x
-    let z1 = this.z
-    let x2 = this.x + 200*sin(this.angleLR)
-    let z2 = this.z - 200*cos(this.angleLR)
-
     for (let i of currentCell.objects){ //check every entity
       if (i.interactible != false && player.y <= i.y + i.height && player.y + player.height >= i.y){
+        let x1 = this.x
+        let z1 = this.z
+        let x2 = this.x + 200*sin(this.angleLR)
+        let z2 = this.z - 200*cos(this.angleLR)
         let x3 = i.x - (i.collWidth/2)*cos(this.angleLR)
         let z3 = i.z - (i.collWidth/2)*sin(this.angleLR)
         let x4 = i.x + (i.collWidth/2)*cos(this.angleLR)
@@ -418,16 +423,22 @@ class pc{
         let t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
         let u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
         if (0 <= t && t <= 1 && 0 <= u && u <= 1){ //if player looking at entity
+          x1 = this.x
+          z1 = this.z
+          x2 = i.x
+          z2 = i.z
           for (let j of currentCell.walls){ //check if no walls in the way
-            x3 = j.x1
-            x4 = j.x2
-            z3 = j.z1
-            z4 = j.z2
-            den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
-            t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
-            u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
-            if (0 <= t && t <= 1 && 0 <= u && u <= 1){
-              return [false, false] //tell program which entity was interacted with
+            if(j.y < i.y && j.y < this.y && j.y + j.height > i.y + i.height && j.y + j.height > this.eyeLevel){
+              x3 = j.x1
+              x4 = j.x2
+              z3 = j.z1
+              z4 = j.z2
+              den = (x1-x2)*(z3-z4)-(z1-z2)*(x3-x4)
+              t = ((x1-x3)*(z3-z4)-(z1-z3)*(x3-x4))/den
+              u = ((x1-x3)*(z1-z2)-(z1-z3)*(x1-x2))/den
+              if (0 <= t && t <= 1 && 0 <= u && u <= 1){
+                return [false, false] //tell program which entity was interacted with
+              }
             }
           }
           return [true, i]
@@ -459,6 +470,14 @@ class pc{
     }
     return false
   }
+
+  damageCalc(){
+    let scaleStat = this.statBlock[this.weapon.scaleStat]
+    let mod = Math.pow(scaleStat, 2)/(scaleStat + 1)
+    mod = Math.pow(mod, 2)/10
+    let damage = this.weapon.damage * mod
+    return damage
+  }
 }
 
 class boundary{
@@ -478,12 +497,14 @@ class boundary{
   }
 
   render(){
-    push()
-    texture(this.texture)
-    translate(this.midX, this.midY, this.midZ + 500)
-    rotateY(this.angle)
-    plane(this.width, this.height)
-    pop()
+    if (collideLineCircle(this.x1, this.z1, this.x2, this.z2, player.x, player.z, 7500)){ //will only try rendering walls the player can see
+      push()
+      texture(this.texture)
+      translate(this.midX, this.midY, this.midZ + 500)
+      rotateY(this.angle)
+      plane(this.width, this.height)
+      pop()
+    }
   }
 }
 
@@ -504,13 +525,20 @@ class floor{
   }
 
   render(){
-    push()
-    texture(this.texture)
-    translate(this.x, -this.y, this.z + 500)
-    rotateX(90)
-    rotateZ(this.rotation)
-    plane(this.width1, this.width2)
-    pop()
+    let relX = player.x - this.x
+    let relZ = player.z - this.z
+    let rottedX = (relX * cos(this.rotation)) + (relZ * sin(this.rotation))
+    // player coords rotated to align with the tested floor tile
+    let rottedZ = -(relX * sin(this.rotation)) + (relZ * cos(this.rotation))
+    if (collideRectCircle(this.unrotX1, this.unrotZ1, this.width1, this.width2, rottedX, rottedZ, 7500)){
+      push()
+        texture(this.texture)
+        translate(this.x, -this.y, this.z + 500)
+        rotateX(90)
+        rotateZ(this.rotation)
+        plane(this.width1, this.width2)
+      pop()
+    }
   }
 }
 
@@ -880,7 +908,7 @@ class ai{
             angle = acos(adj / hyp)
           }
           if (Math.floor(angle) == Math.floor(this.angle)) {
-            player.hp -= this.weapon.damage / (player.level + 1)
+            player.hp -= player.damageCalc()
           }
           this.mode = 'a'
         }
@@ -939,7 +967,7 @@ class cell{
 }
 
 class weapon{
-  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon){
+  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon, scaleStat){
     this.damage = damage
     this.spriteSheet = spriteSheet
     this.aF = aF
@@ -947,6 +975,7 @@ class weapon{
     this.spriteSizes = spriteSizes
     this.name = name
     this.icon = icon
+    this.scaleStat = scaleStat
   }
 }
 
@@ -959,9 +988,12 @@ class apparel{
 }
 
 class consumable{
-  constructor(name, func){
+  constructor(name, func, desc, icon, extraData){
     this.name = name
     this.func = func
+    this.desc = desc
+    this.icon = icon
+    this.extraData = extraData
   }
 
   executeFunc({data = null}){
@@ -974,6 +1006,16 @@ class inventory{
     this.weapons = weapons
     this.apparels = apparels
     this.usables = usables
+  }
+}
+
+class statBlock{
+  constructor(str, dex, end, int, lck){
+    this.str = str
+    this.dex = dex
+    this.end = end
+    this.int = int
+    this.lck = lck
   }
 }
 
@@ -1049,6 +1091,8 @@ function saveGame(){
     let objects = []
     let floors = []
     let grid = []
+    let dialogueBg = Object.assign({}, i.dialogueBg)
+    let fogColour = Object.assign({}, i.fogColour)
     for (let j of i.walls){
       walls.push(new boundary(j.x1, j.z1, j.x2, j.z2, j.texture, j.height, j.base))
     }
@@ -1078,7 +1122,8 @@ function saveGame(){
     }
     grid = Object.assign({}, grid)
     grid = Object.values(grid)
-    savedWorld[1].push(new cell(walls, floors, objects, AIs, grid))
+
+    savedWorld[1].push(new cell(walls, floors, objects, AIs, grid, dialogueBg, fogColour))
   }
   savedWorld = Object.assign({}, savedWorld)
 }
@@ -1099,12 +1144,20 @@ let jumping = false
 let jumpHeight = 0
 let font
 //spritesheets and images
+//entity spritesheets
 let impSprite
 let impSpritesheet
 let chibiSprite
 let chibiSpritesheet
 let droppedSprite
 let droppedSpritesheet
+let blank
+let blankSpritesheet
+let potionSprite
+let potionSpritesheet
+let corpseSprite
+let corpseSpritesheet
+//walls and floors
 let brick
 let tallWall
 let stone
@@ -1112,17 +1165,27 @@ let gravelled
 let wideGravel
 let bark
 let trunk
+let stoneWDoor
+let woodPlanks
+let planksWDoor
+let darkPlanks
+//weapons
 let swordSprite
 let fistSprite
+//buttons
 let crossImg
 let beginButt
 let loadButt
 let upButton
 let downButton
+//inventory icons
 let swordIcon
 let swordIcon2
 let punchIcon
 let teeIcon
+let potionIcon
+let bookIcon
+//fixed use images
 let menuBg
 //more general?
 let gameState = 'menu'
@@ -1136,6 +1199,7 @@ let mouseWasPressed
 let droppedInv
 let entitiesToDelete
 let delIndex
+let loreShown
 //cells
 let cell1
 let cell2
@@ -1147,6 +1211,9 @@ let defSword
 let nmeSword
 //armour
 let defArmour
+//consumables
+let healthPot
+let loreBook1
 //general! again!
 let world
 let savedWorld
@@ -1159,10 +1226,13 @@ let invOffset
 
 function preload(){
   font = loadFont('COMIC.ttf')
+  blank = loadImage('blank.png')
   //entity spritesheets
   impSprite = loadImage('imp.png')
   chibiSprite = loadImage('chibiSprite.png')
   droppedSprite = loadImage('droppedSprite.png')
+  potionSprite = loadImage('potion.png')
+  corpseSprite = loadImage('corpse.png')
   //walls and floors
   brick = loadImage('brickTemp.png')
   tallWall = loadImage('tallWall.png')
@@ -1171,6 +1241,10 @@ function preload(){
   wideGravel = loadImage('wideGravel.png')
   bark = loadImage('bark.png')
   trunk = loadImage('trunk.png')
+  stoneWDoor = loadImage('stoneWDoor.png')
+  woodPlanks = loadImage('woodPlanks.png')
+  planksWDoor = loadImage('planksWDoor.png')
+  darkPlanks = loadImage('darkerPlanks.png')
   //weapons
   swordSprite = loadImage('sword1.png')
   fistSprite = loadImage('punch.png')
@@ -1185,6 +1259,8 @@ function preload(){
   swordIcon2 = loadImage('swordIcon2.png')
   punchIcon = loadImage('punchIcon.png')
   teeIcon = loadImage('armourIcon.png')
+  potionIcon = loadImage('potionIcon.png')
+  bookIcon = loadImage('bookIcon.png')
   //background images
   menuBg = loadImage('mainMenuUI.png')
 }
@@ -1192,11 +1268,16 @@ function preload(){
 function setup() {
   impSpritesheet = new spritesheet(impSprite, 42, 61)
   chibiSpritesheet = new spritesheet(chibiSprite, 44, 50)
+  blankSpritesheet = new spritesheet(blank, 1, 1)
   droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
-  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon)
-  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [], swordIcon)
-  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2)
+  potionSpritesheet = new spritesheet(potionSprite, 64, 64)
+  corpseSpritesheet = new spritesheet(corpseSprite, 44, 50)
+  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str')
+  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [], swordIcon, 'str')
+  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex')
   defArmour = new apparel('default armour', 2, teeIcon)
+  healthPot = new consumable('health potion', 'heal25', 'a bottle of a healing elixir', potionIcon)
+  loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['hello', '[the rest is unreadable]'])
   createCanvas(1024, 576, WEBGL);
   angleMode(DEGREES);
   textAlign(CENTER, CENTER)
@@ -1220,7 +1301,9 @@ function setup() {
     new boundary(5000, 750, 6500, 750, stone, 500, 0), new boundary(5000, 1500, 6000, 1500, stone, 500, 0), new boundary(6500, 750, 7500, 1750, stone, 700, -200),
     new boundary(6000, 1500, 6875, 3000, stone, 700, -200), new boundary(6875, 3000, 8300, 3200, stone, 800, -300), new boundary(7500, 1750, 8800, 1800, stone, 800, -300),
     new boundary(8300, 3200, 10500, 2500, stone, 700, -350), new boundary(9900, 980, 8800, 1800, stone, 700, -350),
-    new boundary(9900, 980, 9900, 480, stone, 700, -350),
+    new boundary(9900, 980, 9900, 480, stone, 750, -400), new boundary(9900, 480, 9500, -1100, stone, 500, -450), new boundary(10500, 2500, 10500, 650, stone, 450, -400),
+    new boundary(10500, 650, 10500, 350, stoneWDoor, 450, -400), new boundary(10500, 350, 10300, -2200, stone, 500, -450),
+    new boundary(10300, -2200, 8700, -2000, stone, 500, -450), new boundary(9500, -1100, 8800, -800, stone, 450, -450),
     // first corridor step edges
     new boundary(6500, 750, 6500, 1500, wideGravel, 50, -50), new boundary(6500, 1500, 6000, 1500, wideGravel, 50, -50),
     new boundary(6195.337, 1845.513, 7104.663, 1320.513, wideGravel, 50, -100), new boundary(6352.513, 2201.041, 7201.041, 1352.513, wideGravel, 50, -150),
@@ -1228,6 +1311,7 @@ function setup() {
     new boundary(8050, 1700, 8050, 3500, wideGravel, 50, -300), new boundary(8800, 3250, 8800, 1750, wideGravel, 50, -350),
     // first corridor ceiling edges
     new boundary(8603.491, 327.431, 7577.431, 3146.509, stone, 50, 350), new boundary(6516.31, 821.074, 5671.074, 2633.69, stone, 100, 400),
+    new boundary(9500, 2850, 9500, 850, stone, 350, 50),
     // first corridor log
     new boundary(10000, 2500, 10000, 1000, bark, 150, -350), new boundary(10150, 2500, 10150, 1000, bark, 150, -350), new boundary(10150, 2500, 10000, 2500, trunk, 150, -350),
     new boundary(10000, 1000, 10150, 1000, trunk, 150, -350)
@@ -1237,29 +1321,58 @@ function setup() {
     //first corridor
     new floor(1500, 750, 5750, 0, 1125, 0, gravelled, {}), new floor(1000, 1050, 6400, -50, 1150, 60, gravelled, {}),
     new floor(500, 1200, 6600, -100, 1600, 45, gravelled, {}), new floor(500, 1800, 6800, -150, 1800, 45, gravelled, {}),
-    new floor(600, 1800, 7000, -200, 2200, 30, gravelled, {}), new floor(1100, 1800, 7500, -250, 2600, 0, gravelled, {}),
+    new floor(600, 1800, 7000, -200, 2200, 30, gravelled, {}), new floor(1200, 1800, 7450, -250, 2600, 0, gravelled, {}),
     new floor(750, 1500, 8425, -300, 2500, 0, gravelled, {}), new floor(2500, 1800, 9600, -350, 2000, -30, gravelled, {}),
-    new floor(1500, 150, 10075, -200, 1750, 90, bark, {}),
+    new floor(1500, 150, 10075, -200, 1750, 90, bark, {}), new floor(1000, 3000, 10000, -400, 400, 0, gravelled, {}),
+    new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(500, 2000, 7900, -500, -500, 45, gravelled, {}),
     //first corridor ceilings
     new floor(2300, 1200, 6150, 500, 1125, 0, stone, {}), new floor(3000, 3000, 9500, 350, 2250, 20, stone, {}),
-    new floor(2000, 2000, 7000, 400, 2150, 25, stone, {})
+    new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {})
   ], [
-
+    new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false})
   ], [
 
   ], [
 
   ], stone, dGrey)
-  world = [cell1]
+  cell2 = new cell([
+    //walls
+    new boundary(-150, 100, -150, -900, woodPlanks, 250, 0), new boundary(-150, -900, -600, -900, woodPlanks, 250, 0),
+    new boundary(-600, -900, -600, -1900, woodPlanks, 250, 0), new boundary(-600, -1900, 600, -1900, woodPlanks, 250, 0),
+    new boundary(600, -1900, 600, -900, woodPlanks, 250, 0), new boundary(600, -900, 100, -900, woodPlanks, 250, 0),
+    new boundary(100, -900, 150, 100, woodPlanks, 250, 0), new boundary(150, 100, -150, 100, planksWDoor, 250, 0),
+    //table legs
+    new boundary(-250, -1625, -225, -1625, darkPlanks, 100, 0), new boundary(-250, -1625, -250, -1600, darkPlanks, 100, 0),
+    new boundary(250, -1625, 225, -1625, darkPlanks, 100, 0), new boundary(250, -1625, 250, -1600, darkPlanks, 100, 0),
+    new boundary(-250, -1375, -225, -1375, darkPlanks, 100, 0), new boundary(-250, -1375, -250, -1400, darkPlanks, 100, 0),
+    new boundary(250, -1375, 225, -1375, darkPlanks, 100, 0), new boundary(250, -1375, 250, -1400, darkPlanks, 100, 0),
+    new boundary(-225, -1625, 225, -1625, darkPlanks, 25, 75), new boundary(-250, -1600, -250, -1400, darkPlanks, 25, 75),
+    new boundary(-225, -1375, 225, -1375, darkPlanks, 25, 75), new boundary(250, -1400, 250, -1600, darkPlanks, 25, 75)
+    
+  ], [
+    new floor(1200, 2000, 0, 0, -900, 0, woodPlanks, {}), new floor(500, 250, 0, 100, -1500, 0, darkPlanks, {}),
+    new floor(1200, 2000, 0, 250, -900, 0, woodPlanks, {})
+  ], [
+    new entity(0, 0, 90, blankSpritesheet, 140, 200, 'loadZone', [0, 10300, -400, 530, 270], 0, new inventory([], [], []), {canCollide: false}),
+    new entity(70, 100, -1420, potionSpritesheet, 64, 64, 'loot', ['delOnEmpty', 'hideOnEmpty'], 1, new inventory([], [], [healthPot]), {canCollide: false}),
+    new entity(556, 0, -944, corpseSpritesheet, 88, 100, 'loot', ['', ''], 2, new inventory([], [], [loreBook1]), {canCollide: false})
+  ], [
+
+  ], [
+
+  ], woodPlanks, brown)
+  world = [cell1, cell2]
   for (let i of world){
     i.floors.sort(floorSort)
     for (let j of i.objects){
       j.ogIndex = i.objects.indexOf(j)
     }
   }
-  currentCell = world[0]
-  currentCellNo = 0
-  player = new pc(1375, 0, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
+  currentCell = world[1]
+  currentCellNo = 1
+  player = new pc(1375, 1, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
+  player.x = 0
+  player.z = 0
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -1275,7 +1388,7 @@ function setup() {
 }
 
 function draw() {
-  player.speed = 80 * (30/frameRate())
+  player.speed = 100 * (30/frameRate())
   background(0)
   noErase()
   switch (gameState){
@@ -1298,7 +1411,7 @@ function draw() {
       for (let i = 5000; i > 2400; i -= 200){
         push()
           fill(currentCell.fogColour[0], currentCell.fogColour[1], currentCell.fogColour[2], 100)
-          translate(player.x, player.eyeLevel, player.z)
+          translate(player.x, -player.eyeLevel, player.z)
           sphere(i)
         pop()
         for (let j of currentCell.objects){
@@ -1315,9 +1428,12 @@ function draw() {
       }
       currentCell.objects = currentCell.objects.sort(entityUnsort)
       for (let i of currentCell.objects){
-        if (i.interactible == 'loot' && i.useData == 'delOnEmpty' && 
+        if (i.interactible == 'loot' && i.useData[0] == 'delOnEmpty' && 
         i.inventory.weapons.length == 0 && i.inventory.apparels.length == 0 && i.inventory.usables.length == 0){
-          currentCell.objects.splice(currentCell.objects.indexOf(i), 1)
+          i.interactible = false
+          if (i.useData[1] == 'hideOnEmpty'){
+            i.spriteSheet = blank
+          }
           break
         }
       }
@@ -1339,6 +1455,7 @@ function draw() {
             player.x = interactCheckVariable[1].useData[1]
             player.y = interactCheckVariable[1].useData[2]
             player.z = interactCheckVariable[1].useData[3]
+            player.angleLR = interactCheckVariable[1].useData[4]
           }
         }
       }
@@ -1401,6 +1518,7 @@ function draw() {
       else if (player.xp >= 100){
         player.xp -= 100
         player.level += 1
+        gameState = 'levelUp'
       }
       break
     case 'pause':
@@ -1470,6 +1588,34 @@ function draw() {
       }
       currentCell.objects = currentCell.objects.sort(entityUnsort)
       lootUI(interactCheckVariable[1])
+      break
+    case 'levelUp':
+      for (let i of currentCell.walls){
+        i.render()
+      }
+      for (let i of currentCell.floors){
+        i.render()
+      }
+      currentCell.objects = currentCell.objects.sort(entitySort)
+      for (let i of currentCell.objects){
+        i.render()
+      }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
+      levelUpUI()
+      break
+    case 'lore':
+      for (let i of currentCell.walls){
+        i.render()
+      }
+      for (let i of currentCell.floors){
+        i.render()
+      }
+      currentCell.objects = currentCell.objects.sort(entitySort)
+      for (let i of currentCell.objects){
+        i.render()
+      }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
+      loreUI()
       break
   }
   mouseWasPressed = mouseIsPressed
@@ -1640,7 +1786,7 @@ function inventoryUI(){
   let usablesButtons = []
   if (player.inventory.usables.length > invOffset * 5){
     for (let i = invOffset * 5; i < player.inventory.usables.length && i < (invOffset * 5) + 5; i++){
-      usablesButtons.push(new menuButton(-400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'usePot', player.inventory.usables[i], 64, 64))
+      usablesButtons.push(new menuButton(400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'usePot', player.inventory.usables[i], 64, 64))
     }
   }
   push()
@@ -1690,7 +1836,16 @@ function inventoryUI(){
       }
     }
     for (let i of usablesButtons){
-      text(i.spriteSheet.name, i.collx + (i.w/2), i.collY)
+      fill(255)
+      rect(448/3, i.collY + 16, 32, 32)
+      image(i.spriteSheet.icon, 400/3, i.collY, 32, 32, 0, 0, 64, 64)
+      fill(0)
+      text(i.spriteSheet.name, 502/3, i.collY)
+      text(i.spriteSheet.desc, 400/3, i.collY + 32)
+      if (i.checkHovered() && mouseIsPressed && hotbarSelect == false){
+        i.spriteSheet.executeFunc({data: i.spriteSheet.extraData})
+        player.inventory.usables.splice(usablesButtons.indexOf(i), 1)
+      }
     }
     for(let i = 0; i < hotbarButts.length; i++){
       let j = hotbarButts[i]
@@ -1729,7 +1884,7 @@ function lootUI(lootee){
   }
   let usablesButtons = []
   for (let i = invOffset * 5; i < lootee.inventory.usables.length && i < (invOffset * 5) + 5; i++){
-    usablesButtons.push(new menuButton(-400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'givePot', lootee.inventory.usables[i], 64, 64))
+    usablesButtons.push(new menuButton(400/3, -175 + (70 * (i - (invOffset * 5))), 800/3, 70, 'givePot', lootee.inventory.usables[i], 64, 64))
   }
   push()
     setCamera(uiCam)
@@ -1779,12 +1934,42 @@ function lootUI(lootee){
       }
     }
     for (let i of usablesButtons){
-      text(i.spriteSheet.name, i.collx + (i.w/2), i.collY)
+      fill(255)
+      rect(448/3, i.collY + 16, 32, 32)
+      image(i.spriteSheet.icon, 400/3, i.collY, 32, 32, 0, 0, 64, 64)
+      fill(0)
+      text(i.spriteSheet.name, 502/3, i.collY)
+      text(i.spriteSheet.desc, 400/3, i.collY + 32)
       if (i.checkHovered() && mouseIsPressed && !mouseWasPressed){
         lootee.inventory.usables.splice(usablesButtons.indexOf(i), 1)
         player.inventory.usables.push(i.spriteSheet)
       }
     }
+    for (let i of scrollButts){
+      i.render()
+      i.executeFunc({})
+    }
+    exitButton.render()
+    exitButton.executeFunc({})
+  pop()
+}
+
+function loreUI(){
+  let shownLore = []
+  let scrollButts = [new menuButton(-440, -215, 40, 40, 'scrollUp', upButton, 64, 64), new menuButton(-440, 140, 40, 40, 'scrollDownLore', downButton, 64, 64)]
+  for (let i = 0; i < 2 && i + (invOffset*2) < loreShown.length; i++){
+    shownLore.push(loreShown[(2*invOffset) + i])
+  }
+  push()
+    setCamera(uiCam)
+    uiCam.setPosition(0, 0, 50)
+    fill(216, 158, 99)
+    rect(-200, 0, 400, 400)
+    fill(182, 132, 82)
+    rect(200, 0, 400, 400)
+    fill(0)
+    text(shownLore[0], -200, 0, 400, 400)
+    text(shownLore[1], 200, 0, 400, 400)
     for (let i of scrollButts){
       i.render()
       i.executeFunc({})
