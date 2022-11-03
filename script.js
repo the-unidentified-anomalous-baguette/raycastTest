@@ -471,12 +471,27 @@ class pc{
     return false
   }
 
-  damageCalc(){
-    let scaleStat = this.statBlock[this.weapon.scaleStat]
-    let mod = Math.pow(scaleStat, 2)/(scaleStat + 1)
-    mod = Math.pow(mod, 2)/10
-    let damage = this.weapon.damage * mod
-    return damage
+  damageCalc(){ //Never let player have stats below 2!
+    let scaleStat = this.statBlock[this.weapon.scaleStat] //finds which skill is used for weapon
+    let mod = Math.pow
+    (
+      Math.log(
+        Math.pow(
+          Math.log(
+            Math.pow(
+              Math.pow(
+                scaleStat, 2
+              )/
+              (
+                  scaleStat + 4
+              ), 2
+            )
+          ), scaleStat
+        )
+      ) + scaleStat, 1.1
+    )/25 //very special damage scaling calculation
+    let damage = this.weapon.damage * mod 
+    return damage //returns damage
   }
 }
 
@@ -693,7 +708,6 @@ class ai{
           }
         }
       }
-      console.log('choosing non player target')
       mightPlayer = false
     }
   }
@@ -723,33 +737,41 @@ class ai{
     let paths = [[[this.path[0]]]]
     let pathFound = 0
     let whichNode = dest.id
+    let destination = dest
     let onDupe = false
+    let terminatedBranches
     while (pathFound == 0){
+      terminatedBranches = 0
       for (let j of paths[paths.length - 1]){
         // if the destination is found, finish searching
-        if (j[0].id == dest.id){
+        if (j[0].id == destination.id){
           pathFound = 1
           break
         }
       }
       if (paths.length >= 10){
         pathFound = 1
-        whichNode = paths[paths.length - 1][0]
+      }
+      if (paths[paths.length - 1].length == 0){
+        pathFound = 1
+        whichNode = paths[paths.length - 2][0][0].id
+        this.goal = [paths[paths.length - 2][0][0].x, paths[paths.length - 2][0][0].z]
+        paths.pop()
       }
       if (pathFound == 0){
         // if not found, create new depth level
         paths.push([])
         for (let i of paths[paths.length - 2]){
           for (let j of i[0].connectedNodes){
+            onDupe = false
             for (let k of paths){
               if (k != paths[paths.length - 1]){
-                onDupe = false
                 for (let l of k){
                   //i, j, k, l check every node added last time
                   //and see every node connected to them
                   //and checks if it is already on the tree
-                  if (l[0].id == currentCell.grid[j].id){
-                    onDupe = true
+                  if (l[0].id == currentCell.grid[j].id){ //l is a node in the tree, j is a node to be checked
+                    onDupe = true //if the node to be checked matches one in the tree
                     break
                   }
                 }
@@ -758,6 +780,7 @@ class ai{
             if (onDupe == false){ // if a node isn't in tree
               // add it, and the node which was used to find it
               paths[paths.length - 1].push([currentCell.grid[j], i[0].id])
+              break
             }
           }
         }
@@ -780,6 +803,9 @@ class ai{
   }
 
   followPath(){
+    if (this.x == this.path[0][0] && this.z == this.path[0][1]){
+      this.path.shift()
+    }
     let opp = this.x - this.path[0][0]
     let adj = this.path[0][1] - this.z
     let hyp = dist(this.x, this.z, this.path[0][0], this.path[0][1])
@@ -802,12 +828,10 @@ class ai{
     let pathLength = this.path.length
     for (let i of currentCell.walls){
       // checks for shortcut to player
-      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
-        if (this.path.length == 1){
-          this.path = []
-          this.goal = []
+      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2])){
+        if (i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
+          break
         }
-        break
       }
       else if (i == currentCell.walls[currentCell.walls.length - 1]){
         this.path = [[player.x, player.z]]
@@ -817,8 +841,10 @@ class ai{
     for (let j = this.path.length - 1; j >= 0; j -= 1){
       for (let i of currentCell.walls){
         // checks for shortcut between nodes
-        if (intersectCheck([this.x, this.z], this.path[j], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
-          break
+        if (intersectCheck([this.x, this.z], this.path[j], [i.x1, i.z1], [i.x2, i.z2])){
+          if (i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
+            break
+          }
         }
         else if (i == currentCell.walls[currentCell.walls.length - 1]){
           // if no walls between AI and final goal, remove intermediate nodes
@@ -835,9 +861,8 @@ class ai{
       // if first location on path has been reached, remove it
       this.path.shift()
       if (this.path.length == 0){
-        //if path complete, ensure it's clear for next cycle
-        this.goal = []
         this.path = []
+        this.goal = []
       }
     }
     this.floorCheck()
@@ -905,8 +930,8 @@ class ai{
         break;
       case 'a': // attacking
         currentCell.objects[this.linkedNtt].animation = 'a'
-        this.attackFrame += 0.25
-        if (this.attackFrame == this.weapon.dF && this.meleeCheck()) {
+        this.attackFrame += 0.25 //move through attack animation
+        if (this.attackFrame == this.weapon.dF && this.meleeCheck()) { //when the enemys weapon is at the point of damage
           let opp = this.x - player.x
           let adj = player.z - this.z
           let hyp = dist(this.x, this.z, player.x, player.z)
@@ -916,9 +941,9 @@ class ai{
           }
           if (asin(opp / hyp) >= 0) {
             angle = acos(adj / hyp)
-          }
+          } //working out if the enemy is facing the player
           if (Math.floor(angle) == Math.floor(this.angle)) {
-            player.hp -= player.damageCalc()
+            player.hp -= this.weapon.damage //take health from player
           }
           this.mode = 'a'
         }
@@ -1345,7 +1370,7 @@ function setup() {
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
     new entity(0, 0, 0, chibiSpritesheet, 75, 175, false, [], 1, new inventory([], [], []), {})
   ], [
-    new ai(7000, -500, -190, 0, 8, 100, 1, 'h', nmeSword, 101)
+    new ai(7000, -500, -190, 0, 15, 100, 1, 'h', nmeSword, 101)
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
@@ -1406,7 +1431,7 @@ function setup() {
 }
 
 function draw() {
-  player.speed = 100 * (30/frameRate())
+  player.speed = 15 * (30/frameRate())
   background(0)
   noErase()
   switch (gameState){
@@ -1973,10 +1998,10 @@ function lootUI(lootee){
 }
 
 function loreUI(){
-  let shownLore = []
+  let shownLore = [] //the lore being displayed
   let scrollButts = [new menuButton(-440, -215, 40, 40, 'scrollUp', upButton, 64, 64), new menuButton(-440, 140, 40, 40, 'scrollDownLore', downButton, 64, 64)]
   for (let i = 0; i < 2 && i + (invOffset*2) < loreShown.length; i++){
-    shownLore.push(loreShown[(2*invOffset) + i])
+    shownLore.push(loreShown[(2*invOffset) + i]) //put correct pages to display variable
   }
   push()
     setCamera(uiCam)
@@ -1984,10 +2009,10 @@ function loreUI(){
     fill(216, 158, 99)
     rect(-200, 0, 400, 400)
     fill(182, 132, 82)
-    rect(200, 0, 400, 400)
+    rect(200, 0, 400, 400) //draw background
     fill(0)
-    text(shownLore[0], -200, 0, 400, 400)
-    text(shownLore[1], 200, 0, 400, 400)
+    text(shownLore[0], -200, 0, 400, 400) //write left page
+    text(shownLore[1], 200, 0, 400, 400) //write right page
     for (let i of scrollButts){
       i.render()
       i.executeFunc({})
