@@ -664,11 +664,15 @@ class ai{
     this.maxHp = hp
   }
 
-  chooseGoal(){
+  chooseGoal({playerQ = true}){
     let foundGoal = false
+    let mightPlayer = playerQ
     while (foundGoal == false){
       let nodes = []
-      this.goal = [player.x, player.z]
+      this.goal = [random(-50000, 50000), random(-50000, 50000)]
+      if (mightPlayer){
+        this.goal = [player.x, player.z]
+      }
       // sets goal at player coords
       for (let i of currentCell.grid){
         nodes.push([i, dist(i.x, i.z, this.goal[0], this.goal[1])])
@@ -689,6 +693,8 @@ class ai{
           }
         }
       }
+      console.log('choosing non player target')
+      mightPlayer = false
     }
   }
 
@@ -725,6 +731,10 @@ class ai{
           pathFound = 1
           break
         }
+      }
+      if (paths.length >= 10){
+        pathFound = 1
+        whichNode = paths[paths.length - 1][0]
       }
       if (pathFound == 0){
         // if not found, create new depth level
@@ -866,7 +876,7 @@ class ai{
       case 'h': // hostile
         let finalNode
         if (this.goal.length == 0) { // if the AI has no goal
-          finalNode = this.chooseGoal()
+          finalNode = this.chooseGoal({})
           // run goal finding algorithm (chooses goal and finds nearest node to it)
           this.path.push(this.findFirstNode()) // find first node
           this.findPath(finalNode) // find path from there to goal's nearest node
@@ -1304,6 +1314,8 @@ function setup() {
     new boundary(9900, 980, 9900, 480, stone, 750, -400), new boundary(9900, 480, 9500, -1100, stone, 500, -450), new boundary(10500, 2500, 10500, 650, stone, 450, -400),
     new boundary(10500, 650, 10500, 350, stoneWDoor, 450, -400), new boundary(10500, 350, 10300, -2200, stone, 500, -450),
     new boundary(10300, -2200, 8700, -2000, stone, 500, -450), new boundary(9500, -1100, 8800, -800, stone, 450, -450),
+    new boundary(8700, -2000, 8500, -1300, stone, 450, -500), new boundary(7800, 1100, 8800, -800, stone, 450, -500),
+    new boundary(5400, 20, 7800, 1100, stone, 450, -500), new boundary(5400, 20, 8500, -1300, stone, 450, -500),
     // first corridor step edges
     new boundary(6500, 750, 6500, 1500, wideGravel, 50, -50), new boundary(6500, 1500, 6000, 1500, wideGravel, 50, -50),
     new boundary(6195.337, 1845.513, 7104.663, 1320.513, wideGravel, 50, -100), new boundary(6352.513, 2201.041, 7201.041, 1352.513, wideGravel, 50, -150),
@@ -1324,16 +1336,22 @@ function setup() {
     new floor(600, 1800, 7000, -200, 2200, 30, gravelled, {}), new floor(1200, 1800, 7450, -250, 2600, 0, gravelled, {}),
     new floor(750, 1500, 8425, -300, 2500, 0, gravelled, {}), new floor(2500, 1800, 9600, -350, 2000, -30, gravelled, {}),
     new floor(1500, 150, 10075, -200, 1750, 90, bark, {}), new floor(1000, 3000, 10000, -400, 400, 0, gravelled, {}),
-    new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(500, 2000, 7900, -500, -500, 45, gravelled, {}),
+    new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(500, 2000, 8100, -500, -500, 45, gravelled, {}),
     //first corridor ceilings
     new floor(2300, 1200, 6150, 500, 1125, 0, stone, {}), new floor(3000, 3000, 9500, 350, 2250, 20, stone, {}),
-    new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {})
+    new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {}),
+    new floor(2500, 1800, 9200, -50, -2000, 0, stone, {})
   ], [
-    new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false})
+    new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
+    new entity(0, 0, 0, chibiSpritesheet, 75, 175, false, [], 1, new inventory([], [], []), {})
   ], [
-
+    new ai(7000, -500, -190, 0, 8, 100, 1, 'h', nmeSword, 101)
   ], [
-
+    new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
+    new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
+    new pathNode(7850, 2100, [5, 7], 6), new pathNode(8400, 2300, [6, 8], 7), new pathNode(9750, 1800, [7], 8),
+    new pathNode(10100, 875, [10], 9), new pathNode(10100, -300, [9, 11], 10), new pathNode(9800, -1800, [10, 12], 11),
+    new pathNode(8650, -1050, [11, 13], 12), new pathNode(7700, -150, [12], 13)
   ], stone, dGrey)
   cell2 = new cell([
     //walls
@@ -1368,11 +1386,11 @@ function setup() {
       j.ogIndex = i.objects.indexOf(j)
     }
   }
-  currentCell = world[1]
-  currentCellNo = 1
+  currentCell = world[0]
+  currentCellNo = 0
   player = new pc(1375, 1, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
-  player.x = 0
-  player.z = 0
+  // player.x = 0
+  // player.z = 0
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
