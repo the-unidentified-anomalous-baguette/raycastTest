@@ -949,7 +949,7 @@ class ai{
         }
         if (this.attackFrame >= this.weapon.aF) {
           this.attackFrame = 0
-          this.meleeCheck()
+          this.meleeCheck() //reset attack once complete
         }
         currentCell.objects[this.linkedNtt].frame = this.attackFrame
         break
