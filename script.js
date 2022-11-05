@@ -119,6 +119,44 @@ function universalSwitch(event, {data = null}){
       loreShown = data
       invOffset = 0
       break
+    case 'strUp':
+      player.statBlock.str += 1
+      gameState = 'game'
+      requestPointerLock()
+      break
+    case 'dexUp':
+      player.statBlock.dex += 1
+      gameState = 'game'
+      requestPointerLock()
+      break
+    case 'endUp':
+      player.statBlock.end += 1
+      gameState = 'game'
+      requestPointerLock()
+      break
+    case 'intUp':
+      player.statBlock.int += 1
+      gameState = 'game'
+      requestPointerLock()
+      break
+    case 'lckUp':
+      player.statBlock.lck += 1
+      gameState = 'game'
+      requestPointerLock()
+      break
+    case 'vitUp':
+      player.statBlock.vit += 1
+      gameState = 'game'
+      player.maxHp = 100 + Math.floor(Math.log(player.statBlock.vit))
+      requestPointerLock()
+      break
+    case 'triggerCombat':
+      for (let i of data){
+        if (currentCell.AIs[i].mode != 'd'){
+          currentCell.AIs[i].mode = 'h'
+        }
+      }
+      break
   }
 }
 
@@ -188,7 +226,7 @@ class pc{
     this.hotbar = [punch, punch, punch, punch]
     this.xp = xp
     this.level = level
-    this.statBlock = new statBlock(3, 3, 3, 3, 3)
+    this.statBlock = new statBlock(2, 2, 2, 2, 2, 2)
   }
 
   floorCheck(){
@@ -402,10 +440,6 @@ class pc{
       droppedInv = new inventory([], [], [])
       invOffset = 0
     }
-    if (this.xp >= 100){
-      this.level += 1
-      this.xp -= 100
-    }
   }
 
   interactCheck(){
@@ -473,6 +507,7 @@ class pc{
 
   damageCalc(){ //Never let player have stats below 2!
     let scaleStat = this.statBlock[this.weapon.scaleStat] //finds which skill is used for weapon
+    let scale = this.weapon.scaleAbility
     let mod = Math.pow
     (
       Math.log(
@@ -481,7 +516,7 @@ class pc{
             Math.pow(
               Math.pow(
                 scaleStat, 2
-              )/
+              ) /
               (
                   scaleStat + 4
               ), 2
@@ -489,8 +524,21 @@ class pc{
           ), scaleStat
         )
       ) + scaleStat, 1.1
-    )/25 //very special damage scaling calculation
+    ) /
+    (
+      (
+        (
+          scale / scale + 2
+        ) * scaleStat
+      ) /
+      log(
+        scale + 1
+      )
+    ) //very special damage scaling calculation
     let damage = this.weapon.damage * mod 
+    if (random(0, 10/player.statBlock.lck) > player.statBlock/(player.statBlock + 1)){
+      damage += random(0, player.statBlock.lck)
+    }
     return damage //returns damage
   }
 }
@@ -519,6 +567,30 @@ class boundary{
       rotateY(this.angle)
       plane(this.width, this.height)
       pop()
+    }
+  }
+}
+
+class triggerWall{
+  constructor(x1, z1, x2, z2, height, base, event, data){
+    this.x1 = x1
+    this.z1 = z1
+    this.x2 = x2
+    this.z2 = z2
+    this.height = height
+    this.base = base
+    this.event = event
+    this.data = data
+    this.active = true
+  }
+
+  collideCheck(){
+    if (
+      collideLineCircle(this.x1, this.z1, this.x2, this.z2, player.x, player.z, 150) && // if player is in the trigger area
+      player.y < this.base + this.height && player.eyeLevel > this.base &&
+      this.active){ // and it's activated
+      universalSwitch(this.event, {data: this.data}) // trigger its event
+      this.active = false //and disable it
     }
   }
 }
@@ -719,11 +791,13 @@ class ai{
     for (let i of currentCell.grid){
       nodes.push([i, dist(this.x, this.z, i.x, i.z)])
     }
+    let k = nodes[0]
     nodes.sort(sortFunction)
     for (let i of nodes){
       for (let j of currentCell.walls){
         if (intersectCheck(
           [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2]) && j.base <= this.y + currentCell.objects[this.linkedNtt].height && j.base + j.height > this.y + 50){
+            console.log(i, nodes[nodes.length - 1], j, currentCell.walls[currentCell.walls.length - 1])
           break
         }
         else if (j == currentCell.walls[currentCell.walls.length - 1]){
@@ -731,6 +805,7 @@ class ai{
         }
       }
     }
+    return k[0] //fallback pathing (can cause AI to ignore physics)
   }
 
   findPath(dest){
@@ -739,9 +814,7 @@ class ai{
     let whichNode = dest.id
     let destination = dest
     let onDupe = false
-    let terminatedBranches
     while (pathFound == 0){
-      terminatedBranches = 0
       for (let j of paths[paths.length - 1]){
         // if the destination is found, finish searching
         if (j[0].id == destination.id){
@@ -828,7 +901,7 @@ class ai{
     let pathLength = this.path.length
     for (let i of currentCell.walls){
       // checks for shortcut to player
-      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2])){
+      if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2])){ //if there's a wall between found
         if (i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
           break
         }
@@ -836,6 +909,16 @@ class ai{
       else if (i == currentCell.walls[currentCell.walls.length - 1]){
         this.path = [[player.x, player.z]]
         this.goal = [player.x, player.z]
+      }
+    }
+    if (this.path.length == 1){ //if locked directly to target but obstructed
+      for (let i of currentCell.walls){
+        if (intersectCheck([this.x, this.z], this.goal, [i.x1, i.z1], [i.x2, i.z2])){ //if there's a wall between found
+          if (i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50){
+            this.path = [] //clear path and goal to allow recalculation
+            this.goal = []
+          }
+        }
       }
     }
     for (let j = this.path.length - 1; j >= 0; j -= 1){
@@ -898,6 +981,13 @@ class ai{
 
   fullPathfinding() {
     switch (this.mode) {
+      case 'i':
+        currentCell.objects[this.linkedNtt].animation = 'i'
+        currentCell.objects[this.linkedNtt].x = this.x
+        currentCell.objects[this.linkedNtt].y = this.y
+        currentCell.objects[this.linkedNtt].z = this.z
+        currentCell.objects[this.linkedNtt].angle = this.angle
+        break
       case 'h': // hostile
         let finalNode
         if (this.goal.length == 0) { // if the AI has no goal
@@ -963,6 +1053,7 @@ class ai{
         currentCell.objects[this.linkedNtt].animation = 'd'
         currentCell.objects[this.linkedNtt].frame = 0
         currentCell.objects[this.linkedNtt].hp = 0
+        currentCell.objects[this.linkedNtt].collisive = false
         player.xp += this.xp
       }
       currentCell.objects[this.linkedNtt].hp = this.hp
@@ -990,9 +1081,10 @@ class ai{
 }
 
 class cell{
-  constructor(walls, floors, objects, AIs, grid, dialogueBg, fogColour){
+  constructor(walls, trigWalls, floors, objects, AIs, grid, dialogueBg, fogColour){
     this.walls = walls
     this.floors = floors
+    this.trigWalls = trigWalls
     this.objects = objects
     this.AIs = AIs
     this.grid = grid
@@ -1002,7 +1094,7 @@ class cell{
 }
 
 class weapon{
-  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon, scaleStat){
+  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon, scaleStat, scaleAbility){
     this.damage = damage
     this.spriteSheet = spriteSheet
     this.aF = aF
@@ -1011,6 +1103,7 @@ class weapon{
     this.name = name
     this.icon = icon
     this.scaleStat = scaleStat
+    this.scaleAbility = scaleAbility
   }
 }
 
@@ -1045,12 +1138,13 @@ class inventory{
 }
 
 class statBlock{
-  constructor(str, dex, end, int, lck){
+  constructor(str, dex, end, int, lck, vit){
     this.str = str
     this.dex = dex
     this.end = end
     this.int = int
     this.lck = lck
+    this.vit = vit
   }
 }
 
@@ -1307,9 +1401,9 @@ function setup() {
   droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
   potionSpritesheet = new spritesheet(potionSprite, 64, 64)
   corpseSpritesheet = new spritesheet(corpseSprite, 44, 50)
-  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str')
-  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [], swordIcon, 'str')
-  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex')
+  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str', 1)
+  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [], swordIcon, 'str', 2)
+  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex', 1)
   defArmour = new apparel('default armour', 2, teeIcon)
   healthPot = new consumable('health potion', 'heal25', 'a bottle of a healing elixir', potionIcon)
   loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['hello', '[the rest is unreadable]'])
@@ -1336,11 +1430,12 @@ function setup() {
     new boundary(5000, 750, 6500, 750, stone, 500, 0), new boundary(5000, 1500, 6000, 1500, stone, 500, 0), new boundary(6500, 750, 7500, 1750, stone, 700, -200),
     new boundary(6000, 1500, 6875, 3000, stone, 700, -200), new boundary(6875, 3000, 8300, 3200, stone, 800, -300), new boundary(7500, 1750, 8800, 1800, stone, 800, -300),
     new boundary(8300, 3200, 10500, 2500, stone, 700, -350), new boundary(9900, 980, 8800, 1800, stone, 700, -350),
-    new boundary(9900, 980, 9900, 480, stone, 750, -400), new boundary(9900, 480, 9500, -1100, stone, 500, -450), new boundary(10500, 2500, 10500, 650, stone, 450, -400),
+    new boundary(9900, 980, 9900, 480, stone, 750, -400), new boundary(9900, 480, 9500, -1100, stone, 500, -450), 
+    new boundary(10500, 2500, 10500, 650, stone, 450, -400),
     new boundary(10500, 650, 10500, 350, stoneWDoor, 450, -400), new boundary(10500, 350, 10300, -2200, stone, 500, -450),
     new boundary(10300, -2200, 8700, -2000, stone, 500, -450), new boundary(9500, -1100, 8800, -800, stone, 450, -450),
-    new boundary(8700, -2000, 8500, -1300, stone, 450, -500), new boundary(7800, 1100, 8800, -800, stone, 450, -500),
-    new boundary(5400, 20, 7800, 1100, stone, 450, -500), new boundary(5400, 20, 8500, -1300, stone, 450, -500),
+    new boundary(8700, -2000, 8500, -1250, stone, 450, -500), new boundary(8500, -1250, 7200, 50, stone, 450, -600),
+    new boundary(6400, 800, 7200, 50, stone, 450, -600), new boundary(8800, -800, 7500, 300, stone, 450, -600),
     // first corridor step edges
     new boundary(6500, 750, 6500, 1500, wideGravel, 50, -50), new boundary(6500, 1500, 6000, 1500, wideGravel, 50, -50),
     new boundary(6195.337, 1845.513, 7104.663, 1320.513, wideGravel, 50, -100), new boundary(6352.513, 2201.041, 7201.041, 1352.513, wideGravel, 50, -150),
@@ -1353,6 +1448,8 @@ function setup() {
     new boundary(10000, 2500, 10000, 1000, bark, 150, -350), new boundary(10150, 2500, 10150, 1000, bark, 150, -350), new boundary(10150, 2500, 10000, 2500, trunk, 150, -350),
     new boundary(10000, 1000, 10150, 1000, trunk, 150, -350)
   ], [
+    new triggerWall(10500, 350, 10000, 350, 175, -400, 'triggerCombat', [0])
+  ], [
     //beginning room
     new floor(5000, 4000, 2500, 0, 2000, 0, gravelled, {}), new floor(5000, 4000, 2500, 2000, 2000, 180, stone, {}),
     //first corridor
@@ -1362,15 +1459,17 @@ function setup() {
     new floor(750, 1500, 8425, -300, 2500, 0, gravelled, {}), new floor(2500, 1800, 9600, -350, 2000, -30, gravelled, {}),
     new floor(1500, 150, 10075, -200, 1750, 90, bark, {}), new floor(1000, 3000, 10000, -400, 400, 0, gravelled, {}),
     new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(500, 2000, 8100, -500, -500, 45, gravelled, {}),
+    new floor(800, 1000, 7000, -550, 400, 30, gravelled, {}), new floor(1000, 3000, 6850, -600, 1700, 0, gravelled, {}),
     //first corridor ceilings
     new floor(2300, 1200, 6150, 500, 1125, 0, stone, {}), new floor(3000, 3000, 9500, 350, 2250, 20, stone, {}),
     new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {}),
-    new floor(2500, 1800, 9200, -50, -2000, 0, stone, {})
+    new floor(2500, 1800, 9200, -50, -2000, 0, stone, {}), new floor(800, 1000, 7000, -250, 400, 30, stone, {}),
+    new floor(1000, 3000, 6850, -300, 1700, 0, stone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
     new entity(0, 0, 0, chibiSpritesheet, 75, 175, false, [], 1, new inventory([], [], []), {})
   ], [
-    new ai(7000, -500, -190, 0, 15, 100, 1, 'h', nmeSword, 101)
+    new ai(7000, -500, -190, 0, 15, 100, 1, 'i', nmeSword, 101)
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
@@ -1393,12 +1492,14 @@ function setup() {
     new boundary(-225, -1375, 225, -1375, darkPlanks, 25, 75), new boundary(250, -1400, 250, -1600, darkPlanks, 25, 75)
     
   ], [
+
+  ], [
     new floor(1200, 2000, 0, 0, -900, 0, woodPlanks, {}), new floor(500, 250, 0, 100, -1500, 0, darkPlanks, {}),
     new floor(1200, 2000, 0, 250, -900, 0, woodPlanks, {})
   ], [
     new entity(0, 0, 90, blankSpritesheet, 140, 200, 'loadZone', [0, 10300, -400, 530, 270], 0, new inventory([], [], []), {canCollide: false}),
     new entity(70, 100, -1420, potionSpritesheet, 64, 64, 'loot', ['delOnEmpty', 'hideOnEmpty'], 1, new inventory([], [], [healthPot]), {canCollide: false}),
-    new entity(556, 0, -944, corpseSpritesheet, 88, 100, 'loot', ['', ''], 2, new inventory([], [], [loreBook1]), {canCollide: false})
+    new entity(556, 0, -944, corpseSpritesheet, 88, 100, 'loot', ['', ''], 2, new inventory([defSword], [], [loreBook1]), {canCollide: false})
   ], [
 
   ], [
@@ -1414,8 +1515,8 @@ function setup() {
   currentCell = world[0]
   currentCellNo = 0
   player = new pc(1375, 1, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
-  // player.x = 0
-  // player.z = 0
+  player.x = 0
+  player.z = 0
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -1444,6 +1545,9 @@ function draw() {
       player.controls()
       for (let i of currentCell.walls){
         i.render()
+      }
+      for (let i of currentCell.trigWalls){
+        i.collideCheck()
       }
       for (let i of currentCell.floors){
         i.render()
@@ -1562,6 +1666,7 @@ function draw() {
         player.xp -= 100
         player.level += 1
         gameState = 'levelUp'
+        exitPointerLock()
       }
       break
     case 'pause':
@@ -1663,6 +1768,8 @@ function draw() {
   }
   mouseWasPressed = mouseIsPressed
 }
+
+// UI functions
 
 function ui(){
   let hbHlPos = [-150, -110, 110, 150]
@@ -1862,7 +1969,7 @@ function inventoryUI(){
       fill(0)
       text(i.spriteSheet.name, -366, i.collY)
       text('dmg: ' + i.spriteSheet.damage, -400, i.collY + 34)
-      if (i.checkHovered() && mouseIsPressed && hotbarSelect == false){
+      if (i.checkHovered() && !mouseWasPressed && mouseIsPressed && hotbarSelect == false){
         selectedWeapon = i.spriteSheet
         hotbarSelect = true
       }
@@ -1874,7 +1981,7 @@ function inventoryUI(){
       fill(0)
       text(i.spriteSheet.name, -298/3, i.collY)
       text('def: ' + i.spriteSheet.defense, -400/3, i.collY + 34)
-      if (i.checkHovered() && mouseIsPressed && hotbarSelect == false){
+      if (i.checkHovered() && mouseWasPressed && mouseIsPressed && hotbarSelect == false){
         player.def = i.spriteSheet.defense
       }
     }
@@ -1885,7 +1992,7 @@ function inventoryUI(){
       fill(0)
       text(i.spriteSheet.name, 502/3, i.collY)
       text(i.spriteSheet.desc, 400/3, i.collY + 32)
-      if (i.checkHovered() && mouseIsPressed && hotbarSelect == false){
+      if (i.checkHovered() && !mouseWasPressed && mouseIsPressed && hotbarSelect == false){
         i.spriteSheet.executeFunc({data: i.spriteSheet.extraData})
         player.inventory.usables.splice(usablesButtons.indexOf(i), 1)
       }
@@ -1961,7 +2068,7 @@ function lootUI(lootee){
       text('dmg: ' + i.spriteSheet.damage, -400, i.collY + 34)
       if (i.checkHovered() && mouseIsPressed && !mouseWasPressed){
         lootee.inventory.weapons.splice(weaponsButtons.indexOf(i), 1)
-        player.inventory.weapons.push(i)
+        player.inventory.weapons.push(i.spriteSheet)
       }
     }
     for (let i of apparelButtons){
@@ -2020,6 +2127,37 @@ function loreUI(){
     exitButton.render()
     exitButton.executeFunc({})
   pop()
+}
+
+function levelUpUI(){
+  let skillButtons = [
+    new menuButton(-200, -112.5, 25, 25, 'strUp', upButton, 64, 64), 
+    new menuButton(-200, -87.5, 25, 25, 'dexUp', upButton, 64, 64),
+    new menuButton(-200, -62.5, 25, 25, 'endUp', upButton, 64, 64),
+    new menuButton(-200, -37.5, 25, 25, 'intUp', upButton, 64, 64),
+    new menuButton(-200, -12.5, 25, 25, 'lckUp', upButton, 64, 64),
+    new menuButton(-200, 12.5, 25, 25, 'vitUp', upButton, 64, 64)
+  ]
+  push()
+    setCamera(uiCam)
+    uiCam.setPosition(0, 0, 0)
+    fill(216, 158, 99)
+    rect(0, 0, 800, 400)
+    fill(0)
+    textSize(25)
+    text('Level up', 0, -175)
+    textAlign(LEFT, CENTER)
+    text('Strength: ' + player.statBlock.str, -400, -100)
+    text('Dexterity: ' + player.statBlock.dex, -400, -75)
+    text('Endurance: ' + player.statBlock.end, -400, -50)
+    text('Intelligence: ' + player.statBlock.int, -400, -25)
+    text('Luck: ' + player.statBlock.lck, -400, 0)
+    text('Vitality: ' + player.statBlock.vit, -400, 25)
+    for (let i of skillButtons){
+      i.render()
+      i.executeFunc({})
+    }
+    pop()
 }
 
 function hotbarUI(weapon){
