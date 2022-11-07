@@ -88,11 +88,13 @@ function universalSwitch(event, {data = null}){
       universalSwitch(data)
       break
     case 'exitInv':
-      if (droppedInv.weapons.length >= 1 || droppedInv.apparels.length >= 1 || droppedInv.usables.length >= 1){
-        currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 8, 8, 'loot', 'delOnEmpty', 0, droppedInv, {canCollide: false}))
-        currentCell.objects[currentCell.objects.length - 1].ogIndex = currentCell.objects.length - 1
+      if (gameState == 'inventory'){
+        if (droppedInv.weapons.length >= 1 || droppedInv.apparels.length >= 1 || droppedInv.usables.length >= 1){
+          currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 8, 8, 'loot', 'delOnEmpty', 0, droppedInv, {canCollide: false}))
+          currentCell.objects[currentCell.objects.length - 1].ogIndex = currentCell.objects.length - 1
+        }
+        droppedInv = new inventory([], [], [])
       }
-      droppedInv = new inventory([], [], [])
       gameState = 'game'
       requestPointerLock()
       break
@@ -147,7 +149,7 @@ function universalSwitch(event, {data = null}){
     case 'vitUp':
       player.statBlock.vit += 1
       gameState = 'game'
-      player.maxHp = 100 + Math.floor(Math.log(player.statBlock.vit))
+      player.maxHp = 100 + Math.floor(Math.pow(Math.log(Math.pow(player.statBlock.vit, 10)), 1.25))
       requestPointerLock()
       break
     case 'triggerCombat':
@@ -440,6 +442,10 @@ class pc{
       droppedInv = new inventory([], [], [])
       invOffset = 0
     }
+    if (keyIsDown(76)){
+      exitPointerLock()
+      gameState = 'statView'
+    }
   }
 
   interactCheck(){
@@ -505,38 +511,24 @@ class pc{
     return false
   }
 
-  damageCalc(){ //Never let player have stats below 2!
-    let scaleStat = this.statBlock[this.weapon.scaleStat] //finds which skill is used for weapon
-    let scale = this.weapon.scaleAbility
-    let mod = Math.pow
-    (
-      Math.log(
-        Math.pow(
-          Math.log(
-            Math.pow(
-              Math.pow(
-                scaleStat, 2
-              ) /
-              (
-                  scaleStat + 4
-              ), 2
-            )
-          ), scaleStat
-        )
-      ) + scaleStat, 1.1
-    ) /
-    (
-      (
-        (
-          scale / scale + 2
-        ) * scaleStat
-      ) /
-      log(
-        scale + 1
-      )
-    ) //very special damage scaling calculation
-    let damage = this.weapon.damage * mod 
-    if (random(0, 10/player.statBlock.lck) > player.statBlock/(player.statBlock + 1)){
+  damageCalc({incLuck = true}){ //Never let player have stats below 2!
+    let x = this.statBlock[this.hotbar[this.weapon].scaleStat] //finds which skill is used for weapon
+    let a = this.hotbar[this.weapon].scaleAbility
+    let mod = pow(x, 2)
+    mod /= (x - 0.5)
+    mod = Math.pow(mod, 2)
+    mod = Math.log(mod)
+    mod = Math.pow(mod, x)
+    mod = Math.log(mod)
+    mod = Math.pow(mod, 1.1)
+    let d = Math.log(a + 1)
+    d /= a
+    mod /= d
+    mod = Math.log(mod)
+    mod += x/(6-a)
+    mod /= (6-a)
+    let damage = this.hotbar[this.weapon].damage * mod 
+    if (random(0, 10/player.statBlock.lck) > player.statBlock.lck/(player.statBlock.lck + 1) && incLuck == true){
       damage += random(0, player.statBlock.lck)
     }
     return damage //returns damage
@@ -805,7 +797,7 @@ class ai{
         }
       }
     }
-    return k[0] //fallback pathing (can cause AI to ignore physics)
+    return nodes[0][0] //fallback pathing (can cause AI to ignore physics)
   }
 
   findPath(dest){
@@ -1033,7 +1025,7 @@ class ai{
             angle = acos(adj / hyp)
           } //working out if the enemy is facing the player
           if (Math.floor(angle) == Math.floor(this.angle)) {
-            player.hp -= this.weapon.damage //take health from player
+            player.hp -= this.weapon.damage / (1+(player.armour.defense * (log(player.statBlock.end) + log(random(0, player.statBlock.lck)))))//take health from player
           }
           this.mode = 'a'
         }
@@ -1216,6 +1208,7 @@ function saveGame(){
    ]
   for (let i of world){
     let walls = []
+    let trigWalls = []
     let AIs = []
     let objects = []
     let floors = []
@@ -1227,6 +1220,11 @@ function saveGame(){
     }
     walls = Object.assign({}, walls)
     walls = Object.values(walls)
+    for (let j of i.trigWalls){
+      trigWalls.push(new triggerWall(j.x1, j.z1, j.x2, j.z2, j.height, j.base, j.event, j.data))
+    }
+    trigWalls = Object.assign({}, trigWalls)
+    trigWalls = Object.values(trigWalls)
     for (let j of i.objects){
       objects.push(new entity(j.x, j.y, j.z, new spritesheet(j.spriteSheet, j.sWidth, j.sHeight), j.collWidth, j.height, j.interactible, j.useData, j.ogIndex, new inventory(j.inventory.weapons, j.inventory.apparels, j.inventory.usables), {canCollide: j.collisive}))
     }
@@ -1251,8 +1249,7 @@ function saveGame(){
     }
     grid = Object.assign({}, grid)
     grid = Object.values(grid)
-
-    savedWorld[1].push(new cell(walls, floors, objects, AIs, grid, dialogueBg, fogColour))
+    savedWorld[1].push(new cell(walls, trigWalls, floors, objects, AIs, grid, dialogueBg, fogColour))
   }
   savedWorld = Object.assign({}, savedWorld)
 }
@@ -1352,6 +1349,7 @@ let hotbarSelect
 let selectedWeapon
 let hotbarButts
 let invOffset
+let xpToNextLevel
 
 function preload(){
   font = loadFont('COMIC.ttf')
@@ -1435,7 +1433,8 @@ function setup() {
     new boundary(10500, 650, 10500, 350, stoneWDoor, 450, -400), new boundary(10500, 350, 10300, -2200, stone, 500, -450),
     new boundary(10300, -2200, 8700, -2000, stone, 500, -450), new boundary(9500, -1100, 8800, -800, stone, 450, -450),
     new boundary(8700, -2000, 8500, -1250, stone, 450, -500), new boundary(8500, -1250, 7200, 50, stone, 450, -600),
-    new boundary(6400, 800, 7200, 50, stone, 450, -600), new boundary(8800, -800, 7500, 300, stone, 450, -600),
+    new boundary(6400, 800, 7200, 50, stone, 450, -600), new boundary(8800, -800, 7500, 300, stone, 450, -600), 
+    new boundary(7000, 1050, 7500, 300, stone, 450, -600), new boundary(7200, 3150, 7000, 1050, stone, 350, -600),
     // first corridor step edges
     new boundary(6500, 750, 6500, 1500, wideGravel, 50, -50), new boundary(6500, 1500, 6000, 1500, wideGravel, 50, -50),
     new boundary(6195.337, 1845.513, 7104.663, 1320.513, wideGravel, 50, -100), new boundary(6352.513, 2201.041, 7201.041, 1352.513, wideGravel, 50, -150),
@@ -1463,8 +1462,8 @@ function setup() {
     //first corridor ceilings
     new floor(2300, 1200, 6150, 500, 1125, 0, stone, {}), new floor(3000, 3000, 9500, 350, 2250, 20, stone, {}),
     new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {}),
-    new floor(2500, 1800, 9200, -50, -2000, 0, stone, {}), new floor(800, 1000, 7000, -250, 400, 30, stone, {}),
-    new floor(1000, 3000, 6850, -300, 1700, 0, stone, {})
+    new floor(2500, 1800, 9200, -50, -2000, 0, stone, {}), new floor(1000, 1000, 7000, -250, 400, 30, stone, {}),
+    new floor(1500, 3000, 6850, -300, 1700, 15, stone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
     new entity(0, 0, 0, chibiSpritesheet, 75, 175, false, [], 1, new inventory([], [], []), {})
@@ -1506,6 +1505,9 @@ function setup() {
 
   ], woodPlanks, brown)
   world = [cell1, cell2]
+  world[0].AIs[0].x = -50
+  world[0].AIs[0].y = 0
+  world[0].AIs[0].z = -50
   for (let i of world){
     i.floors.sort(floorSort)
     for (let j of i.objects){
@@ -1515,14 +1517,17 @@ function setup() {
   currentCell = world[0]
   currentCellNo = 0
   player = new pc(1375, 1, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
-  player.x = 0
-  player.z = 0
+  player.x = 6800
+  player.z = 761
+  player.y = -600
+  player.inventory.weapons.push(defSword)
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
   cam.eyeY -= 175
   cam.centerZ += player.z
   cam.eyeZ += player.z
+  xpToNextLevel = 100
   uiCam.ortho()
   textFont(font)
   noStroke()
@@ -1614,7 +1619,7 @@ function draw() {
         if (player.attackFrame == player.hotbar[player.weapon].dF){
           interactCheckVariable = player.attackCheck()
           if (interactCheckVariable != false){
-            interactCheckVariable.hp -= player.hotbar[player.weapon].damage + player.level
+            interactCheckVariable.hp -= player.damageCalc({})
           }
         }
         if (player.attackFrame > player.hotbar[player.weapon].aF){
@@ -1662,9 +1667,11 @@ function draw() {
         gameState = 'death'
         exitPointerLock()
       }
-      else if (player.xp >= 100){
-        player.xp -= 100
+      else if (player.xp >= xpToNextLevel){
+        player.xp -= xpToNextLevel
         player.level += 1
+        player.hp = player.maxHp
+        xpToNextLevel = 100 + (100 * pow(player.level, 2))
         gameState = 'levelUp'
         exitPointerLock()
       }
@@ -1736,6 +1743,23 @@ function draw() {
       }
       currentCell.objects = currentCell.objects.sort(entityUnsort)
       lootUI(interactCheckVariable[1])
+      break
+    case 'statView':
+      for (let i of currentCell.walls){
+        i.render()
+      }
+      for (let i of currentCell.floors){
+        i.render()
+      }
+      // for (let i of currentCell.AIs){
+      //   i.fullPathfinding()
+      // }
+      currentCell.objects = currentCell.objects.sort(entitySort)
+      for (let i of currentCell.objects){
+        i.render()
+      }
+      currentCell.objects = currentCell.objects.sort(entityUnsort)
+      statsUI()
       break
     case 'levelUp':
       for (let i of currentCell.walls){
@@ -2104,6 +2128,40 @@ function lootUI(lootee){
   pop()
 }
 
+function statsUI(){
+  let wpn = player.weapon
+  push()
+    setCamera(uiCam)
+    uiCam.setPosition(0, 0, 0)
+    fill(216, 158, 99)
+    rect(0, 0, 800, 400)
+    fill(0)
+    textSize(25)
+    textAlign(LEFT, CENTER)
+    text('Strength: ' + player.statBlock.str, -400, -100)
+    text('Dexterity: ' + player.statBlock.dex, -400, -75)
+    text('Endurance: ' + player.statBlock.end, -400, -50)
+    text('Intelligence: ' + player.statBlock.int, -400, -25)
+    text('Luck: ' + player.statBlock.lck, -400, 0)
+    text('Vitality: ' + player.statBlock.vit, -400, 25)
+    player.weapon = 0
+    text('weapon 1: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -100)
+    player.weapon = 1
+    text('weapon 2: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -75)
+    player.weapon = 2
+    text('weapon 3: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -50)
+    player.weapon = 3
+    text('weapon 4: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -25)
+    text('health: ' + player.hp + '/' + player.maxHp, 400/3, 0)
+    textAlign(CENTER, CENTER)
+    text('xp: ' + player.xp + '/' + xpToNextLevel, 0, -100)
+    text('level: ' + player.level, 0, -75)
+    exitButton.render()
+    exitButton.executeFunc({})
+  pop()
+  player.weapon = wpn
+}
+
 function loreUI(){
   let shownLore = [] //the lore being displayed
   let scrollButts = [new menuButton(-440, -215, 40, 40, 'scrollUp', upButton, 64, 64), new menuButton(-440, 140, 40, 40, 'scrollDownLore', downButton, 64, 64)]
@@ -2138,6 +2196,7 @@ function levelUpUI(){
     new menuButton(-200, -12.5, 25, 25, 'lckUp', upButton, 64, 64),
     new menuButton(-200, 12.5, 25, 25, 'vitUp', upButton, 64, 64)
   ]
+  let wpn = player.weapon
   push()
     setCamera(uiCam)
     uiCam.setPosition(0, 0, 0)
@@ -2157,7 +2216,17 @@ function levelUpUI(){
       i.render()
       i.executeFunc({})
     }
-    pop()
+    player.weapon = 0
+    text('weapon 1: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -100)
+    player.weapon = 1
+    text('weapon 2: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -75)
+    player.weapon = 2
+    text('weapon 3: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -50)
+    player.weapon = 3
+    text('weapon 4: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -25)
+    text('health: ' + player.hp + '/' + player.maxHp, 400/3, 0)
+  pop()
+  player.weapon = wpn
 }
 
 function hotbarUI(weapon){
