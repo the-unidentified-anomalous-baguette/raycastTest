@@ -789,7 +789,6 @@ class ai{
       for (let j of currentCell.walls){
         if (intersectCheck(
           [this.x, this.z], [i[0].x, i[0].z], [j.x1, j.z1], [j.x2, j.z2]) && j.base <= this.y + currentCell.objects[this.linkedNtt].height && j.base + j.height > this.y + 50){
-            console.log(i, nodes[nodes.length - 1], j, currentCell.walls[currentCell.walls.length - 1])
           break
         }
         else if (j == currentCell.walls[currentCell.walls.length - 1]){
@@ -1046,6 +1045,7 @@ class ai{
         currentCell.objects[this.linkedNtt].frame = 0
         currentCell.objects[this.linkedNtt].hp = 0
         currentCell.objects[this.linkedNtt].collisive = false
+        currentCell.objects[this.linkedNtt].interactible = 'loot'
         player.xp += this.xp
       }
       currentCell.objects[this.linkedNtt].hp = this.hp
@@ -1203,9 +1203,33 @@ function intersectCheck(l11, l12, l21, l22){
 }
 
 function saveGame(){
-  savedWorld = [new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, player.armour, {xp: player.xp, level: player.level}),
+  savedWorld = [
+    new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, player.armour, {xp: player.xp, level: player.level}),
     [], currentCellNo
-   ]
+  ]
+  let inv
+  let weapons = []
+  let apparels = []
+  let usables = []
+  for (let i of player.inventory.weapons){
+    weapons.push(new weapon(i.name, i.damage, i.spriteSheet, i.aF, i.dF, i.spriteSizes, i.icon, i.scaleStat, i.scaleAbility))
+  }
+  weapons = Object.assign({}, weapons)
+  weapons = Object.values(weapons)
+  for (let i of player.inventory.apparels){
+    apparels.push(new apparel(i.name, i.defense, i.icon))
+  }
+  apparels = Object.assign({}, apparels)
+  apparels = Object.values(apparels)
+  for (let i of player.inventory.usables){
+    usables.push(new consumable(i.name, i.func, i.desc, i.icon, i.exrtaData))
+  }
+  usables = Object.assign({}, usables)
+  usables = Object.values(usables)
+  inv = new inventory(weapons, apparels, usables)
+  savedWorld[0].inventory = inv
+  savedWorld[0].hotbar = [player.hotbar[0], player.hotbar[1], player.hotbar[2], player.hotbar[3]]
+  savedWorld[0].statBlock = new statBlock(player.statBlock.str, player.statBlock.dex, player.statBlock.end, player.statBlock.int, player.statBlock.lck, player.statBlock.vit)
   for (let i of world){
     let walls = []
     let trigWalls = []
@@ -1298,6 +1322,8 @@ let darkPlanks
 //weapons
 let swordSprite
 let fistSprite
+let axeSprite
+let daggerSprite
 //buttons
 let crossImg
 let beginButt
@@ -1311,6 +1337,7 @@ let punchIcon
 let teeIcon
 let potionIcon
 let bookIcon
+let daggerIcon
 //fixed use images
 let menuBg
 //more general?
@@ -1329,14 +1356,18 @@ let loreShown
 //cells
 let cell1
 let cell2
+let cell3
 let currentCell
 let currentCellNo
 //weapons
 let punch
 let defSword
 let nmeSword
+let battleAxe
+let dagger
 //armour
 let defArmour
+let ironArmour
 //consumables
 let healthPot
 let loreBook1
@@ -1375,6 +1406,8 @@ function preload(){
   //weapons
   swordSprite = loadImage('sword1.png')
   fistSprite = loadImage('punch.png')
+  axeSprite = loadImage('axe.png')
+  daggerSprite = loadImage('dagger.png')
   //buttons
   beginButt = loadImage('beginButton.png')
   loadButt = loadImage('deathButton.png')
@@ -1385,9 +1418,11 @@ function preload(){
   swordIcon = loadImage('swordIcon.png')
   swordIcon2 = loadImage('swordIcon2.png')
   punchIcon = loadImage('punchIcon.png')
+  axeIcon = loadImage('axeIcon.png')
   teeIcon = loadImage('armourIcon.png')
   potionIcon = loadImage('potionIcon.png')
   bookIcon = loadImage('bookIcon.png')
+  daggerIcon = loadImage('daggerIcon.png')
   //background images
   menuBg = loadImage('mainMenuUI.png')
 }
@@ -1400,9 +1435,12 @@ function setup() {
   potionSpritesheet = new spritesheet(potionSprite, 64, 64)
   corpseSpritesheet = new spritesheet(corpseSprite, 44, 50)
   punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str', 1)
-  defSword = new weapon('default sword', 10, swordSprite, 3, 2, [], swordIcon, 'str', 2)
+  defSword = new weapon('blunt sword', 10, swordSprite, 3, 2, [], swordIcon, 'str', 2)
+  dagger = new weapon('iron dagger', 5, daggerSprite, 3, 2, [], daggerIcon, 'dex', 3)
   nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex', 1)
-  defArmour = new apparel('default armour', 2, teeIcon)
+  axe = new weapon('battleaxe', 18, axeSprite, 6, 4, [], axeIcon, 'str', 1)
+  defArmour = new apparel('ragged clothes', 2, teeIcon)
+  ironArmour = new apparel('iron armour', 5, teeIcon)
   healthPot = new consumable('health potion', 'heal25', 'a bottle of a healing elixir', potionIcon)
   loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['hello', '[the rest is unreadable]'])
   createCanvas(1024, 576, WEBGL);
@@ -1432,22 +1470,40 @@ function setup() {
     new boundary(10500, 2500, 10500, 650, stone, 450, -400),
     new boundary(10500, 650, 10500, 350, stoneWDoor, 450, -400), new boundary(10500, 350, 10300, -2200, stone, 500, -450),
     new boundary(10300, -2200, 8700, -2000, stone, 500, -450), new boundary(9500, -1100, 8800, -800, stone, 450, -450),
-    new boundary(8700, -2000, 8500, -1250, stone, 450, -500), new boundary(8500, -1250, 7200, 50, stone, 450, -600),
+    new boundary(8700, -2000, 8500, -1250, stone, 450, -500), new boundary(8500, -1250, 7200, 50, stone, 500, -600),
     new boundary(6400, 800, 7200, 50, stone, 450, -600), new boundary(8800, -800, 7500, 300, stone, 450, -600), 
     new boundary(7000, 1050, 7500, 300, stone, 450, -600), new boundary(7200, 3150, 7000, 1050, stone, 350, -600),
+    new boundary(6400, 800, 6400, 3200, stone, 300, -600), new boundary(6400, 3200, 6200, 3500, stone, 300, -650),
+    new boundary(6200, 3500, 5700, 4900, stone, 300, -650), new boundary(7200, 3150, 7500, 3400, stone, 300, -650),
+    new boundary(7500, 3400, 7700, 4900, stone, 300, -650),
     // first corridor step edges
     new boundary(6500, 750, 6500, 1500, wideGravel, 50, -50), new boundary(6500, 1500, 6000, 1500, wideGravel, 50, -50),
     new boundary(6195.337, 1845.513, 7104.663, 1320.513, wideGravel, 50, -100), new boundary(6352.513, 2201.041, 7201.041, 1352.513, wideGravel, 50, -150),
     new boundary(6340.381, 2613.173, 7613.173, 1340.381, wideGravel, 50, -200), new boundary(6809.808, 3129.423, 7709.808, 1570.577, wideGravel, 50, -250),
     new boundary(8050, 1700, 8050, 3500, wideGravel, 50, -300), new boundary(8800, 3250, 8800, 1750, wideGravel, 50, -350),
+    new boundary(11132.532, 2154.423, 10232.532, 595.577, wideGravel, 50, -400), new boundary(10232.532, 595.577, 8067.468, 1845.577, wideGravel, 50, -400),
+    new boundary(10500, -1100, 9500, -1100, wideGravel, 50, -450), new boundary(8500, -2250, 8500, -750, wideGravel, 50, -500),
+    new boundary(8500, -750, 9000, -750, wideGravel, 50, -500), new boundary(7216.117, 30.33, 7569.67, 383.883, wideGravel, 50, -550),
+    new boundary(6403.59, 633.013, 7096.41, 1033.013, wideGravel, 50, -600),
     // first corridor ceiling edges
     new boundary(8603.491, 327.431, 7577.431, 3146.509, stone, 50, 350), new boundary(6516.31, 821.074, 5671.074, 2633.69, stone, 100, 400),
-    new boundary(9500, 2850, 9500, 850, stone, 350, 50),
+    new boundary(9500, 2850, 9500, 850, stone, 350, 50), new boundary(7950, -1000, 10450, -1000, stone, 100, -50),
+    new boundary(7743.668, -1461.478, 9385.742, -1021.485, stone, 50, -100), new boundary(7433.975, -1616.025, 9166.025, -616.025, stone, 50, -150),
+    new boundary(7683.013, 216.987, 6816.987, -283.013, stone, 100, -250), new boundary(7923.85, 590.114, 6474.961, 201.886, stone, 50, -300),
     // first corridor log
     new boundary(10000, 2500, 10000, 1000, bark, 150, -350), new boundary(10150, 2500, 10150, 1000, bark, 150, -350), new boundary(10150, 2500, 10000, 2500, trunk, 150, -350),
-    new boundary(10000, 1000, 10150, 1000, trunk, 150, -350)
+    new boundary(10000, 1000, 10150, 1000, trunk, 150, -350),
+    // corridor split
+    new boundary(6800, 4800, 6000, 5800, stone, 350, -650), new boundary(6800, 4800, 7400, 5700, stone, 350, -650),
+    new boundary(7900, 5800, 7700, 4900, stone, 350, -650), new boundary(5500, 5800, 5700, 4900, stone, 350, -650),
+    new boundary(7400, 5700, 7900, 5800, stoneWDoor, 550, -600),
+    // battle room
+    new boundary(6000, 5800, 6300, 7000, stone, 600, -650), new boundary(6300, 7000, 6400, 8600, stone, 600, -650),
+    new boundary(6400, 8600, 6000, 9500, stone, 600, -650), new boundary(5600, 9500, 4900, 9200, stone, 600, -650),
+    new boundary(4900, 9200, 4400, 7800, stone, 600, -650), new boundary(4400, 7800, 4500, 6700, stone, 600, -650), 
+    new boundary(4500, 6700, 5500, 5800, stone, 600, -650)
   ], [
-    new triggerWall(10500, 350, 10000, 350, 175, -400, 'triggerCombat', [0])
+    new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2])
   ], [
     //beginning room
     new floor(5000, 4000, 2500, 0, 2000, 0, gravelled, {}), new floor(5000, 4000, 2500, 2000, 2000, 180, stone, {}),
@@ -1459,22 +1515,32 @@ function setup() {
     new floor(1500, 150, 10075, -200, 1750, 90, bark, {}), new floor(1000, 3000, 10000, -400, 400, 0, gravelled, {}),
     new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(500, 2000, 8100, -500, -500, 45, gravelled, {}),
     new floor(800, 1000, 7000, -550, 400, 30, gravelled, {}), new floor(1000, 3000, 6850, -600, 1700, 0, gravelled, {}),
+    new floor(2000, 2000, 6700, -650, 3900, 0, gravelled, {}), new floor(4000, 6000, 5400, -650, 7900, 0, gravelled, {}),
+    new floor(1200, 1300, 7580, -600, 5300, -15, gravelled, {}),
     //first corridor ceilings
     new floor(2300, 1200, 6150, 500, 1125, 0, stone, {}), new floor(3000, 3000, 9500, 350, 2250, 20, stone, {}),
     new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {}),
-    new floor(2500, 1800, 9200, -50, -2000, 0, stone, {}), new floor(1000, 1000, 7000, -250, 400, 30, stone, {}),
-    new floor(1500, 3000, 6850, -300, 1700, 15, stone, {})
+    new floor(2500, 2000, 9200, -50, -2000, 0, stone, {}), new floor(1700, 500, 8500, -100, -1000, 15, stone, {}),
+    new floor(2000, 2000, 7800, -150, -250, 30, stone, {}), new floor(1000, 1000, 7000, -250, 400, 30, stone, {}), 
+    new floor(1500, 2700, 6850, -300, 1700, 15, stone, {}), new floor(2000, 2400, 6700, -350, 3700, 0, stone, {}),
+    new floor(4000, 6000, 5400, -50, 7900, 0, stone, {}) , new floor(4000, 1000, 6800, -300, 5300, 0, stone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
-    new entity(0, 0, 0, chibiSpritesheet, 75, 175, false, [], 1, new inventory([], [], []), {})
+    new entity(6000, -650, 7600, chibiSpritesheet, 75, 175, false, [], 1, new inventory([defSword], [defArmour], [healthPot]), {}),
+    new entity(6000, -650, 7600, chibiSpritesheet, 75, 175, false, [], 2, new inventory([defSword], [ironArmour], []), {}),
+    new entity(6000, -650, 7600, chibiSpritesheet, 75, 175, false, [], 3, new inventory([axe], [defArmour], []), {}),
+    new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), {canCollide: false}),
+    new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), {canCollide: false})
   ], [
-    new ai(7000, -500, -190, 0, 15, 100, 1, 'i', nmeSword, 101)
+    new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11),
+    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11)
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
     new pathNode(7850, 2100, [5, 7], 6), new pathNode(8400, 2300, [6, 8], 7), new pathNode(9750, 1800, [7], 8),
     new pathNode(10100, 875, [10], 9), new pathNode(10100, -300, [9, 11], 10), new pathNode(9800, -1800, [10, 12], 11),
-    new pathNode(8650, -1050, [11, 13], 12), new pathNode(7700, -150, [12], 13)
+    new pathNode(8650, -1050, [11, 13], 12), new pathNode(7700, -150, [12, 14], 13), new pathNode(7100, 400, [13, 15], 14),
+    new pathNode(6700, 1300, [14, 16], 15), new pathNode(6700, 4000, [15, 17], 16), new pathNode(5200, 6900, [16], 17)
   ], stone, dGrey)
   cell2 = new cell([
     //walls
@@ -1504,10 +1570,25 @@ function setup() {
   ], [
 
   ], woodPlanks, brown)
-  world = [cell1, cell2]
-  world[0].AIs[0].x = -50
-  world[0].AIs[0].y = 0
-  world[0].AIs[0].z = -50
+  cell3 = new cell([
+    new boundary(-150, -100, 150, -100, stoneWDoor, 450, 0), new boundary(150, -100, 300, 50, stone, 450, 0), 
+    new boundary(300, 50, 300, 350, stone, 450, 0), new boundary(300, 350, 150, 500, stone, 450, 0),
+    new boundary(150, 500, -150, 500, stone, 450, 0), new boundary(-150, 500, -300, 350, stone, 450, 0),
+    new boundary(-300, 350, -300, 50, stone, 450, 0), new boundary(-300, 50, -150, -100, stone, 450, 0)
+  ], [
+
+  ], [
+    new floor(600, 600, 0, 0, 200, 0, woodPlanks, {}), new floor(600, 600, 0, 450, 200, 0, woodPlanks, {})
+  ], [
+    new entity(0, 0, -100, blankSpritesheet, 140, 200, 'loadZone', [0, 7600, -600, 5600, -30], 0, new inventory([], [], []), {canCollide: false}),
+    new entity(100, 0, 450, chibiSpritesheet, 75, 175, 'talk', )
+  ], [
+
+  ], [
+
+  ], stone, dGrey
+  )
+  world = [cell1, cell2, cell3]
   for (let i of world){
     i.floors.sort(floorSort)
     for (let j of i.objects){
@@ -1517,10 +1598,9 @@ function setup() {
   currentCell = world[0]
   currentCellNo = 0
   player = new pc(1375, 1, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
-  player.x = 6800
-  player.z = 761
-  player.y = -600
-  player.inventory.weapons.push(defSword)
+  player.y = -650
+  player.x = 7600
+  player.z = 5666
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -1620,6 +1700,9 @@ function draw() {
           interactCheckVariable = player.attackCheck()
           if (interactCheckVariable != false){
             interactCheckVariable.hp -= player.damageCalc({})
+            if (interactCheckVariable.mode == 'i'){
+              interactCheckVariable.mode = 'h'
+            }
           }
         }
         if (player.attackFrame > player.hotbar[player.weapon].aF){
@@ -2005,8 +2088,11 @@ function inventoryUI(){
       fill(0)
       text(i.spriteSheet.name, -298/3, i.collY)
       text('def: ' + i.spriteSheet.defense, -400/3, i.collY + 34)
-      if (i.checkHovered() && mouseWasPressed && mouseIsPressed && hotbarSelect == false){
+      if (i.checkHovered() && !mouseWasPressed && mouseIsPressed && hotbarSelect == false){
         player.def = i.spriteSheet.defense
+        player.inventory.apparels.splice(player.inventory.apparels.indexOf(i.spriteSheet), 1)
+        player.inventory.apparels.push(player.armour)
+        player.armour = i.spriteSheet
       }
     }
     for (let i of usablesButtons){
@@ -2152,7 +2238,8 @@ function statsUI(){
     text('weapon 3: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -50)
     player.weapon = 3
     text('weapon 4: ' + player.damageCalc({incLuck: false}).toFixed(1), 400/3, -25)
-    text('health: ' + player.hp + '/' + player.maxHp, 400/3, 0)
+    text('health: ' + Math.floor(player.hp) + '/' + Math.floor(player.maxHp), 400/3, 0)
+    text('armour: ' + player.armour.defense, 400/3, 25)
     textAlign(CENTER, CENTER)
     text('xp: ' + player.xp + '/' + xpToNextLevel, 0, -100)
     text('level: ' + player.level, 0, -75)
