@@ -339,6 +339,9 @@ class pc{
       if(this.moveCheck('fw')){
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
+        if (!footsteps.isPlaying()){
+          footsteps.play()
+        }
       }
     }
     if (keyIsDown(88)){//debug log player position
@@ -348,18 +351,27 @@ class pc{
       if(this.moveCheck('bw')){
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
+        if (!footsteps.isPlaying()){
+          footsteps.play()
+        }
       }
     }
     if (keyIsDown(65)){//a
       if(this.moveCheck('lw')){
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
+        if (!footsteps.isPlaying()){
+          footsteps.play()
+        }
       }
     }
     if (keyIsDown(68)){//d
       if(this.moveCheck('rw')){
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
+        if (!footsteps.isPlaying()){
+          footsteps.play()
+        }
       }
     }
     if (keyIsDown(37)){//left
@@ -1340,6 +1352,8 @@ let bookIcon
 let daggerIcon
 //fixed use images
 let menuBg
+//audio
+let footsteps
 //more general?
 let gameState = 'menu'
 let mainMenuButts
@@ -1425,6 +1439,10 @@ function preload(){
   daggerIcon = loadImage('daggerIcon.png')
   //background images
   menuBg = loadImage('mainMenuUI.png')
+  //audio
+  userStartAudio()
+  soundFormats('wav')
+  footsteps = loadSound('footsteps')
 }
 
 function setup() {
@@ -1443,7 +1461,8 @@ function setup() {
   ironArmour = new apparel('iron armour', 5, teeIcon)
   healthPot = new consumable('health potion', 'heal25', 'a bottle of a healing elixir', potionIcon)
   loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['hello', '[the rest is unreadable]'])
-  createCanvas(1024, 576, WEBGL);
+  canvas = createCanvas(1024, 576, WEBGL);
+  canvas.parent('container')
   angleMode(DEGREES);
   textAlign(CENTER, CENTER)
   noStroke();
@@ -1581,7 +1600,7 @@ function setup() {
     new floor(600, 600, 0, 0, 200, 0, woodPlanks, {}), new floor(600, 600, 0, 450, 200, 0, woodPlanks, {})
   ], [
     new entity(0, 0, -100, blankSpritesheet, 140, 200, 'loadZone', [0, 7600, -600, 5600, -30], 0, new inventory([], [], []), {canCollide: false}),
-    new entity(100, 0, 450, chibiSpritesheet, 75, 175, 'talk', )
+    //new entity(100, 0, 450, chibiSpritesheet, 75, 175, 'talk', )
   ], [
 
   ], [
