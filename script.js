@@ -9,6 +9,7 @@ function universalSwitch(event, {data = null}){
   switch (event){
     case 'beginGame':
       beginGame()
+      currentCell.bgMusic.play()
       break
     case 'advanceTalk0':
       talkDepth += 1
@@ -335,41 +336,41 @@ class pc{
   }
 
   controls(){
-    if (keyIsDown(87)){//w
-      if(this.moveCheck('fw')){
-        this.x += this.speed * sin(this.angleLR)
-        this.z -= this.speed * cos(this.angleLR)
-        if (!footsteps.isPlaying()){
-          footsteps.play()
-        }
-      }
-    }
     if (keyIsDown(88)){//debug log player position
       console.log(player.x, player.y, player.z)
     }
-    if (keyIsDown(83)){//s
+    if (keyIsDown(fwKey)){//w
+      if(this.moveCheck('fw')){
+        this.x += this.speed * sin(this.angleLR)
+        this.z -= this.speed * cos(this.angleLR)
+        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
+          footsteps.play()
+        }
+      }
+    }
+    if (keyIsDown(bwKey)){//s
       if(this.moveCheck('bw')){
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
-        if (!footsteps.isPlaying()){
+        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
           footsteps.play()
         }
       }
     }
-    if (keyIsDown(65)){//a
+    if (keyIsDown(lwKey)){//a
       if(this.moveCheck('lw')){
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
-        if (!footsteps.isPlaying()){
+        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
           footsteps.play()
         }
       }
     }
-    if (keyIsDown(68)){//d
+    if (keyIsDown(rwKey)){//d
       if(this.moveCheck('rw')){
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
-        if (!footsteps.isPlaying()){
+        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
           footsteps.play()
         }
       }
@@ -402,7 +403,7 @@ class pc{
     if (keyIsDown(52)){
       this.weapon = 3
     }
-    this.angleLR += movedX  * (30/frameRate()) * 0.1
+    this.angleLR += movedX  * (30/frameRate()) * 0.1 * (1 - (2 * invertX))
     if (this.angleLR > 360){
       this.angleLR -= 360
     }
@@ -410,7 +411,7 @@ class pc{
       this.angleLR += 360
     }
     if (this.angleUD <= 75 && this.angleUD >= -89){
-      this.angleUD -= movedY * (30/frameRate()) * 0.1
+      this.angleUD -= movedY * (30/frameRate()) * 0.1 * (1 - (2 * invertY))
       if (this.angleUD > 75){
         this.angleUD = 75
       }
@@ -420,6 +421,8 @@ class pc{
     }
     if (keyIsDown(27)){//escape key
       gameState = 'pause'
+      currentCell.bgMusic.pause()
+      battleMusic1.pause()
     }
     cam.eyeX = player.x
     cam.eyeZ = player.z + 500
@@ -447,14 +450,14 @@ class pc{
     if (this.y == this.currentFloor.y){
       jumpHeight = 0
     }
-    if (keyIsDown(73) && this.attackFrame == 0){ //i for inventory
+    if (keyIsDown(invKey) && this.attackFrame == 0){ //i for inventory
       exitPointerLock()
       hotbarSelect = false
       gameState = 'inventory'
       droppedInv = new inventory([], [], [])
       invOffset = 0
     }
-    if (keyIsDown(76)){
+    if (keyIsDown(statKey)){
       exitPointerLock()
       gameState = 'statView'
     }
@@ -1022,7 +1025,6 @@ class ai{
         currentCell.objects[this.linkedNtt].angle = this.angle
         break;
       case 'a': // attacking
-      console.log(this.weapon.damage)
         currentCell.objects[this.linkedNtt].animation = 'a'
         this.attackFrame += 0.25 //move through attack animation
         if (this.attackFrame == this.weapon.dF && this.meleeCheck()) { //when the enemys weapon is at the point of damage
@@ -1253,6 +1255,7 @@ function saveGame(){
     let grid = []
     let dialogueBg = Object.assign({}, i.dialogueBg)
     let fogColour = Object.assign({}, i.fogColour)
+    let bgMusic = Object.assign({}, i.bgMusic)
     for (let j of i.walls){
       walls.push(new boundary(j.x1, j.z1, j.x2, j.z2, j.texture, j.height, j.base))
     }
@@ -1287,7 +1290,7 @@ function saveGame(){
     }
     grid = Object.assign({}, grid)
     grid = Object.values(grid)
-    savedWorld[1].push(new cell(walls, trigWalls, floors, objects, AIs, grid, dialogueBg, fogColour))
+    savedWorld[1].push(new cell(walls, trigWalls, floors, objects, AIs, grid, dialogueBg, fogColour, bgMusic))
   }
   savedWorld = Object.assign({}, savedWorld)
 }
@@ -1301,12 +1304,23 @@ function loadGame(){
 }
 
 //general vars
+let canvas
 let cam;
 let uiCam;
 let player;
 let jumping = false
 let jumpHeight = 0
 let font
+let fwKey = 87
+let bwKey = 83
+let lwKey = 65
+let rwKey = 68
+let invKey = 73
+let intKey = 69
+let statKey = 76
+let jumpKey = 32
+let invertY = false
+let invertX = false
 //spritesheets and images
 //entity spritesheets
 let impSprite
@@ -1400,6 +1414,7 @@ let hotbarButts
 let invOffset
 let xpToNextLevel
 let battleQuery
+let playerAudioPos
 
 function preload(){
   font = loadFont('COMIC.ttf')
@@ -1637,6 +1652,9 @@ function setup() {
   cam.eyeZ += player.z
   xpToNextLevel = 100
   uiCam.ortho()
+  playerAudioPos = new p5.Panner3D()
+  playerAudioPos.set(player.x, player.y, player.z)
+  playerAudioPos.orient(0, player.angleLR, 0)
   battleQuery = false
   textFont(font)
   noStroke()
@@ -1662,15 +1680,15 @@ function draw() {
         }
       }
       if (battleQuery){
-        if (world[currentCellNo].bgMusic.isPlaying()){
+        if (currentCell.bgMusic.isPlaying()){
           world[currentCellNo].bgMusic.stop()
         }
         if (!battleMusic1.isPlaying()){
           battleMusic1.play()
         }
       }
-      else if (!world[currentCellNo].bgMusic.isPlaying()){
-        world[currentCellNo].bgMusic.play()
+      else if (!currentCell.bgMusic.isPlaying()){
+        currentCell.bgMusic.play()
       }
       cam.pan(0)
       cam.tilt(0)
@@ -1716,7 +1734,7 @@ function draw() {
           break
         }
       }
-      if (keyIsDown(69)){ //interaction check
+      if (keyIsDown(intKey)){ //interaction check
         interactCheckVariable = player.interactCheck()
         if (interactCheckVariable[0]){
           if (interactCheckVariable[1].interactible != 'loadZone'){
@@ -1729,12 +1747,14 @@ function draw() {
             exitPointerLock()
           }
           else {
+            currentCell.bgMusic.pause()
             currentCell = world[interactCheckVariable[1].useData[0]]
             currentCellNo = interactCheckVariable[1].useData[0]
             player.x = interactCheckVariable[1].useData[1]
             player.y = interactCheckVariable[1].useData[2]
             player.z = interactCheckVariable[1].useData[3]
             player.angleLR = interactCheckVariable[1].useData[4]
+            currentCell.bgMusic.play()
           }
         }
       }
@@ -1791,7 +1811,9 @@ function draw() {
         }
       }
       if (keyIsDown(120)){ //load
+        currentCell.bgMusic.pause()
         loadGame()
+        currentCell.bgMusic.play()
       }
       if (player.hp <= 0){
         gameState = 'death'
@@ -1805,6 +1827,8 @@ function draw() {
         gameState = 'levelUp'
         exitPointerLock()
       }
+      playerAudioPos.set(player.x, player.y, player.z)
+      playerAudioPos.orient(0, player.angleLR, 0)
       break
     case 'pause':
       for (let i of currentCell.walls){
