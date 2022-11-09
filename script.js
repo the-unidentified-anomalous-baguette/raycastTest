@@ -1022,6 +1022,7 @@ class ai{
         currentCell.objects[this.linkedNtt].angle = this.angle
         break;
       case 'a': // attacking
+      console.log(this.weapon.damage)
         currentCell.objects[this.linkedNtt].animation = 'a'
         this.attackFrame += 0.25 //move through attack animation
         if (this.attackFrame == this.weapon.dF && this.meleeCheck()) { //when the enemys weapon is at the point of damage
@@ -1036,7 +1037,7 @@ class ai{
             angle = acos(adj / hyp)
           } //working out if the enemy is facing the player
           if (Math.floor(angle) == Math.floor(this.angle)) {
-            player.hp -= this.weapon.damage / (1+(player.armour.defense * (log(player.statBlock.end) + log(random(0, player.statBlock.lck)))))//take health from player
+            player.hp -= this.weapon.damage / (1+(player.armour.defense * (log(player.statBlock.end) + random(0, player.statBlock.lck))))//take health from player
           }
           this.mode = 'a'
         }
@@ -1085,7 +1086,7 @@ class ai{
 }
 
 class cell{
-  constructor(walls, trigWalls, floors, objects, AIs, grid, dialogueBg, fogColour){
+  constructor(walls, trigWalls, floors, objects, AIs, grid, dialogueBg, fogColour, bgMusic){
     this.walls = walls
     this.floors = floors
     this.trigWalls = trigWalls
@@ -1094,6 +1095,7 @@ class cell{
     this.grid = grid
     this.dialogueBg = dialogueBg
     this.fogColour = fogColour
+    this.bgMusic = bgMusic
   }
 }
 
@@ -1354,6 +1356,8 @@ let daggerIcon
 let menuBg
 //audio
 let footsteps
+let defaultMusic
+let battleMusic1
 //more general?
 let gameState = 'menu'
 let mainMenuButts
@@ -1395,6 +1399,7 @@ let selectedWeapon
 let hotbarButts
 let invOffset
 let xpToNextLevel
+let battleQuery
 
 function preload(){
   font = loadFont('COMIC.ttf')
@@ -1443,9 +1448,14 @@ function preload(){
   userStartAudio()
   soundFormats('wav')
   footsteps = loadSound('footsteps')
+  soundFormats('mp3')
+  defaultMusic = loadSound('Rest_Your_Head_with_Strings')
+  battleMusic1 = loadSound('Armies_on_the_Ground')
 }
 
 function setup() {
+  battleMusic1.setVolume(0.1)
+  defaultMusic.setVolume(0.1)
   impSpritesheet = new spritesheet(impSprite, 42, 61)
   chibiSpritesheet = new spritesheet(chibiSprite, 44, 50)
   blankSpritesheet = new spritesheet(blank, 1, 1)
@@ -1560,7 +1570,7 @@ function setup() {
     new pathNode(10100, 875, [10], 9), new pathNode(10100, -300, [9, 11], 10), new pathNode(9800, -1800, [10, 12], 11),
     new pathNode(8650, -1050, [11, 13], 12), new pathNode(7700, -150, [12, 14], 13), new pathNode(7100, 400, [13, 15], 14),
     new pathNode(6700, 1300, [14, 16], 15), new pathNode(6700, 4000, [15, 17], 16), new pathNode(5200, 6900, [16], 17)
-  ], stone, dGrey)
+  ], stone, dGrey, defaultMusic)
   cell2 = new cell([
     //walls
     new boundary(-150, 100, -150, -900, woodPlanks, 250, 0), new boundary(-150, -900, -600, -900, woodPlanks, 250, 0),
@@ -1588,7 +1598,7 @@ function setup() {
 
   ], [
 
-  ], woodPlanks, brown)
+  ], woodPlanks, brown, defaultMusic)
   cell3 = new cell([
     new boundary(-150, -100, 150, -100, stoneWDoor, 450, 0), new boundary(150, -100, 300, 50, stone, 450, 0), 
     new boundary(300, 50, 300, 350, stone, 450, 0), new boundary(300, 350, 150, 500, stone, 450, 0),
@@ -1605,8 +1615,7 @@ function setup() {
 
   ], [
 
-  ], stone, dGrey
-  )
+  ], stone, dGrey, defaultMusic)
   world = [cell1, cell2, cell3]
   for (let i of world){
     i.floors.sort(floorSort)
@@ -1628,6 +1637,7 @@ function setup() {
   cam.eyeZ += player.z
   xpToNextLevel = 100
   uiCam.ortho()
+  battleQuery = false
   textFont(font)
   noStroke()
   saveGame()
@@ -1644,6 +1654,24 @@ function draw() {
       menuUI()
       break
     case 'game':
+      battleQuery = false
+      for (let i of currentCell.AIs){
+        if (i.mode == 'h'){
+          battleQuery = true
+          break
+        }
+      }
+      if (battleQuery){
+        if (world[currentCellNo].bgMusic.isPlaying()){
+          world[currentCellNo].bgMusic.stop()
+        }
+        if (!battleMusic1.isPlaying()){
+          battleMusic1.play()
+        }
+      }
+      else if (!world[currentCellNo].bgMusic.isPlaying()){
+        world[currentCellNo].bgMusic.play()
+      }
       cam.pan(0)
       cam.tilt(0)
       player.controls()
