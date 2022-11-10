@@ -343,8 +343,8 @@ class pc{
       if(this.moveCheck('fw')){
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
-        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
-          footsteps.play()
+        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y){
+          this.currentFloor.sound.play()
         }
       }
     }
@@ -352,8 +352,8 @@ class pc{
       if(this.moveCheck('bw')){
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
-        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
-          footsteps.play()
+        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y){
+          this.currentFloor.sound.play()
         }
       }
     }
@@ -361,8 +361,8 @@ class pc{
       if(this.moveCheck('lw')){
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
-        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
-          footsteps.play()
+        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y){
+          this.currentFloor.sound.play()
         }
       }
     }
@@ -370,8 +370,8 @@ class pc{
       if(this.moveCheck('rw')){
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
-        if (!footsteps.isPlaying() && this.y == this.currentFloor.y){
-          footsteps.play()
+        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y){
+          this.currentFloor.sound.play()
         }
       }
     }
@@ -603,7 +603,7 @@ class triggerWall{
 }
 
 class floor{
-  constructor(width1, width2, x, y, z, rotation, texture, {catchZone = 50}){
+  constructor(width1, width2, x, y, z, rotation, texture, {catchZone = 50, sound = footstepsGravel}){
     this.width1 = width1
     this.width2 = width2
     this.x = x
@@ -616,6 +616,7 @@ class floor{
     this.unrotZ1 = -width2/2
     this.unrotZ2 = width2/2
     this.catchZone = catchZone
+    this.sound = sound
   }
 
   render(){
@@ -1369,7 +1370,8 @@ let daggerIcon
 //fixed use images
 let menuBg
 //audio
-let footsteps
+let footstepsGravel
+let footstepsWood
 let defaultMusic
 let battleMusic1
 //more general?
@@ -1461,9 +1463,9 @@ function preload(){
   menuBg = loadImage('mainMenuUI.png')
   //audio
   userStartAudio()
-  soundFormats('wav')
-  footsteps = loadSound('footsteps')
   soundFormats('mp3')
+  footstepsGravel = loadSound('footstepsGravel')
+  footstepsWood = loadSound('footstepsWood')
   defaultMusic = loadSound('Rest_Your_Head_with_Strings')
   battleMusic1 = loadSound('Armies_on_the_Ground')
 }
@@ -1603,7 +1605,7 @@ function setup() {
   ], [
 
   ], [
-    new floor(1200, 2000, 0, 0, -900, 0, woodPlanks, {}), new floor(500, 250, 0, 100, -1500, 0, darkPlanks, {}),
+    new floor(1200, 2000, 0, 0, -900, 0, woodPlanks, {sound: footstepsWood}), new floor(500, 250, 0, 100, -1500, 0, darkPlanks, {}),
     new floor(1200, 2000, 0, 250, -900, 0, woodPlanks, {})
   ], [
     new entity(0, 0, 90, blankSpritesheet, 140, 200, 'loadZone', [0, 10300, -400, 530, 270], 0, new inventory([], [], []), {canCollide: false}),
@@ -1622,7 +1624,7 @@ function setup() {
   ], [
 
   ], [
-    new floor(600, 600, 0, 0, 200, 0, woodPlanks, {}), new floor(600, 600, 0, 450, 200, 0, woodPlanks, {})
+    new floor(600, 600, 0, 0, 200, 0, woodPlanks, {sound: footstepsWood}), new floor(600, 600, 0, 450, 200, 0, woodPlanks, {})
   ], [
     new entity(0, 0, -100, blankSpritesheet, 140, 200, 'loadZone', [0, 7600, -600, 5600, -30], 0, new inventory([], [], []), {canCollide: false}),
     //new entity(100, 0, 450, chibiSpritesheet, 75, 175, 'talk', )
@@ -1674,20 +1676,21 @@ function draw() {
     case 'game':
       battleQuery = false
       for (let i of currentCell.AIs){
-        if (i.mode == 'h'){
+        if (i.mode == 'h' || i.mode == 'm' || i.mode == 'a'){
           battleQuery = true
           break
         }
       }
       if (battleQuery){
         if (currentCell.bgMusic.isPlaying()){
-          world[currentCellNo].bgMusic.stop()
+          world[currentCellNo].bgMusic.pause()
         }
         if (!battleMusic1.isPlaying()){
           battleMusic1.play()
         }
       }
       else if (!currentCell.bgMusic.isPlaying()){
+        battleMusic1.stop()
         currentCell.bgMusic.play()
       }
       cam.pan(0)
