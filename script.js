@@ -11,6 +11,20 @@ function universalSwitch(event, {data = null}){
       beginGame()
       currentCell.bgMusic.play()
       break
+    case 'settings':
+      prevState = gameState
+      console.log(prevState)
+      gameState = 'settings'
+      exitPointerLock()
+      currentCell.bgMusic.pause()
+      break
+    case 'return':
+      gameState = prevState
+      if (gameState == 'game'){
+        requestPointerLock()
+        currentCell.bgMusic.play()
+      }
+      break
     case 'advanceTalk0':
       talkDepth += 1
       talkOption = 0
@@ -339,7 +353,7 @@ class pc{
     if (keyIsDown(88)){//debug log player position
       console.log(player.x, player.y, player.z)
     }
-    if (keyIsDown(fwKey)){//w
+    if (keyIsDown(ctrlListens.fwKey)){//w
       if(this.moveCheck('fw')){
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
@@ -348,7 +362,7 @@ class pc{
         }
       }
     }
-    if (keyIsDown(bwKey)){//s
+    if (keyIsDown(ctrlListens.bwKey)){//s
       if(this.moveCheck('bw')){
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
@@ -357,7 +371,7 @@ class pc{
         }
       }
     }
-    if (keyIsDown(lwKey)){//a
+    if (keyIsDown(ctrlListens.lwKey)){//a
       if(this.moveCheck('lw')){
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
@@ -366,7 +380,7 @@ class pc{
         }
       }
     }
-    if (keyIsDown(rwKey)){//d
+    if (keyIsDown(ctrlListens.rwKey)){//d
       if(this.moveCheck('rw')){
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
@@ -432,7 +446,7 @@ class pc{
     cam.centerX = cam.eyeX + sin(this.angleLR)
     cam.centerY = cam.eyeY - tan(this.angleUD)
     cam.centerZ = cam.eyeZ - cos(this.angleLR)
-    if (keyIsDown(32) && jumpHeight == 0 && this.y == this.currentFloor.y){//space
+    if (keyIsDown(ctrlListens.jumpKey) && jumpHeight == 0 && this.y == this.currentFloor.y){//space
       jumping = true
     }
     this.floorCheck()
@@ -450,14 +464,14 @@ class pc{
     if (this.y == this.currentFloor.y){
       jumpHeight = 0
     }
-    if (keyIsDown(invKey) && this.attackFrame == 0){ //i for inventory
+    if (keyIsDown(ctrlListens.invKey) && this.attackFrame == 0){ //i for inventory
       exitPointerLock()
       hotbarSelect = false
       gameState = 'inventory'
       droppedInv = new inventory([], [], [])
       invOffset = 0
     }
-    if (keyIsDown(statKey)){
+    if (keyIsDown(ctrlListens.statKey)){
       exitPointerLock()
       gameState = 'statView'
     }
@@ -1157,6 +1171,20 @@ class statBlock{
   }
 }
 
+class keyGroup{
+  constructor(fwKey, bwKey, lwKey, rwKey, invKey, intKey, statKey, jumpKey){
+    this.fwKey = fwKey
+    this.bwKey = bwKey
+    this.lwKey = lwKey
+    this.rwKey = rwKey
+    this.invKey = invKey
+    this.intKey = intKey
+    this.statKey = statKey
+    this.jumpKey = jumpKey
+    this.nullRef = 0
+  }
+}
+
 function beginGame(){
   gameState = 'game'
   requestPointerLock()
@@ -1305,6 +1333,18 @@ function loadGame(){
 }
 
 //general vars
+let keysList = [
+  '', '', '', '', '', '', '', '', 'backspace', 'tab', '', '', '', 'enter', '', '', 'shift', 'ctrl', 'alt', 'pause', 'caps lock', '', '', '', 
+  '', '', '', 'escape', '', '', '', '', 'space', 'page up', 'page down', 'end', 'home', 'left arrow', 'up arrow', 'right arrow', 'down arrow', '',
+  '', '', '', 'insert', 'delete', '', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '', '', '', '', '', '', '', 'a', 'b', 'c', 'd', 'e',
+  'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'left window key', 
+  'right window key', 'select key', '', '', 'numpad 0', 'numpad 1', 'numpad 2', 'numpad 3', 'numpad 4', 'numpad 5', 'numpad 6', 'numpad 7',
+  'numpad 8', 'numpad 9', 'multiply', 'add', '', 'subtract', 'decimal point', 'divide', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9',
+  'f10', 'f11', 'f12', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'num lock', 'scroll lock', '', '', '', 
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 
+  '', '', 'semi-colon', 'equal sign', 'comma', 'dash', 'period', 'forward slash', 'grave accent', '', '', '', '', '', '', '', '', '', '', '', 
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'open bracket', 'back slash', 'close braket', 'single quote'
+]
 let canvas
 let cam;
 let uiCam;
@@ -1312,16 +1352,10 @@ let player;
 let jumping = false
 let jumpHeight = 0
 let font
-let fwKey = 87
-let bwKey = 83
-let lwKey = 65
-let rwKey = 68
-let invKey = 73
-let intKey = 69
-let statKey = 76
-let jumpKey = 32
 let invertY = false
 let invertX = false
+let ctrlListens
+let changeKey = 'nullRef'
 //spritesheets and images
 //entity spritesheets
 let impSprite
@@ -1356,6 +1390,7 @@ let daggerSprite
 //buttons
 let crossImg
 let beginButt
+let settingsButt
 let loadButt
 let upButton
 let downButton
@@ -1369,6 +1404,7 @@ let bookIcon
 let daggerIcon
 //fixed use images
 let menuBg
+let settingsBg
 //audio
 let footstepsGravel
 let footstepsWood
@@ -1376,6 +1412,7 @@ let defaultMusic
 let battleMusic1
 //more general?
 let gameState = 'menu'
+let prevState
 let mainMenuButts
 let meleeMin = 75
 let meleeMax = 150
@@ -1446,6 +1483,7 @@ function preload(){
   daggerSprite = loadImage('dagger.png')
   //buttons
   beginButt = loadImage('beginButton.png')
+  settingsButt = loadImage('settingsButton.png')
   loadButt = loadImage('deathButton.png')
   crossImg =  loadImage('exitButton.png')
   upButton = loadImage('upButton.png')
@@ -1461,6 +1499,7 @@ function preload(){
   daggerIcon = loadImage('daggerIcon.png')
   //background images
   menuBg = loadImage('mainMenuUI.png')
+  settingsBg = loadImage('settingsBg.png')
   //audio
   userStartAudio()
   soundFormats('mp3')
@@ -1471,6 +1510,7 @@ function preload(){
 }
 
 function setup() {
+  ctrlListens = new keyGroup(87, 83, 65, 68, 72, 69, 76, 32)
   battleMusic1.setVolume(0.1)
   defaultMusic.setVolume(0.1)
   impSpritesheet = new spritesheet(impSprite, 42, 61)
@@ -1495,7 +1535,7 @@ function setup() {
   noStroke();
   rectMode(CENTER)
   mainMenuButts = [
-    new menuButton(-83, -100, 166, 56, 'beginGame', beginButt, 166, 56)
+    new menuButton(-83, -100, 166, 56, 'beginGame', beginButt, 166, 56), new menuButton(-83, 45, 166, 56, 'settings', settingsButt, 166, 56)
   ]
   loadButton = new menuButton(-100, 100, 200, 60, 'load', loadButt, 200, 60)
   exitButton = new menuButton(400, -200, 32, 32, 'exitInv', crossImg, 64, 64)
@@ -1673,6 +1713,9 @@ function draw() {
     case 'menu':
       menuUI()
       break
+    case 'settings':
+      settingsUI()
+      break
     case 'game':
       battleQuery = false
       for (let i of currentCell.AIs){
@@ -1737,7 +1780,7 @@ function draw() {
           break
         }
       }
-      if (keyIsDown(intKey)){ //interaction check
+      if (keyIsDown(ctrlListens.intKey)){ //interaction check
         interactCheckVariable = player.interactCheck()
         if (interactCheckVariable[0]){
           if (interactCheckVariable[1].interactible != 'loadZone'){
@@ -2002,7 +2045,7 @@ function ui(){
     if (player.interactCheck()[0]){
       textSize(20)
       fill(red)
-      text('interact (e)', 0, 10)
+      text('interact', 0, 10)
     }
   pop()
 }
@@ -2015,6 +2058,55 @@ function menuUI(){
     for (let i of mainMenuButts){
       i.render()
       i.executeFunc({})
+    }
+  pop()
+}
+
+function settingsUI(){
+  let expandedKeyNames = [
+    'fwKey', 'forwards', 'bwKey', 'backwards', 'lwKey', 'strafe left', 'rwKey', 'strafe right', 
+    'jumpKey', 'jump', 'invKey', 'inventory', 'statKey', 'view stats', 'intKey', 'interact'
+  ]
+  let buttons = [
+    //back
+    new  menuButton(-450, 200, 64, 64, 'return', upButton, 64, 64),
+    //controls
+    new menuButton(-400, -200, 200, 25, 'fwKey', upButton, 64, 64), new menuButton(-400, -175, 200, 25, 'bwKey', upButton, 64, 64),
+    new menuButton(-400, -150, 200, 25, 'lwKey', upButton, 64, 64), new menuButton(-400, -125, 200, 25, 'rwKey', upButton, 64, 64),
+    new menuButton(-400, -100, 200, 25, 'jumpKey', upButton, 64, 64), new menuButton(-400, -75, 200, 25, 'invKey', upButton, 64, 64), 
+    new menuButton(-400, -50, 200, 25, 'statKey', upButton, 64, 64), new menuButton(-400, -25, 200, 25, 'intKey', upButton, 64, 64), 
+  ]
+  let colourBool = 0
+  let light = [216, 158, 99]
+  let dark = [182, 132, 82]
+  push()
+    textAlign(CENTER, CENTER)
+    setCamera(uiCam)
+    image(settingsBg, -512, -288)
+    uiCam.setPosition(0, 0, 0)
+    textSize(20)
+    fill (0)
+    text('Key bindings')
+    for (let i of buttons){
+      if (i.func.substring(i.func.length - 3) == 'Key'){
+        colourBool = (changeKey == i.func)
+        if (colourBool){
+          fill(light)
+        }
+        else {
+          fill(dark)
+        }
+        rect(i.transX, i.transY, i.w, i.h)
+        fill(0)
+        text(expandedKeyNames[expandedKeyNames.indexOf(i.func) + 1] + ': ' + keysList[ctrlListens[i.func]], i.transX, i.transY)
+        if (i.checkHovered() && !mouseWasPressed && mouseIsPressed){
+          changeKey = i.func
+        }
+      }
+      else {
+        i.render()
+        i.executeFunc({})
+      }
     }
   pop()
 }
@@ -2398,5 +2490,12 @@ function hotbarUI(weapon){
   for (let i of hotbarButts){
     i.render()
     i.executeFunc({data: weapon})
+  }
+}
+
+function keyPressed(){
+  if (gameState == 'settings'){
+    ctrlListens[changeKey] = keyCode
+    changeKey = 'nullRef'
   }
 }
