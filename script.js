@@ -390,7 +390,7 @@ class pc{
     if (keyIsDown(88)){//debug log player position
       console.log(player.x, player.y, player.z)
     }
-    if (keyIsDown(ctrlListens.fwKey)){//w
+    if (keyIsDown(ctrlListens.fwKey) && !this.attacking){//w
       if(this.moveCheck('fw')){
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
@@ -399,7 +399,7 @@ class pc{
         }
       }
     }
-    if (keyIsDown(ctrlListens.bwKey)){//s
+    if (keyIsDown(ctrlListens.bwKey) && !this.attacking){//s
       if(this.moveCheck('bw')){
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
@@ -408,7 +408,7 @@ class pc{
         }
       }
     }
-    if (keyIsDown(ctrlListens.lwKey)){//a
+    if (keyIsDown(ctrlListens.lwKey) && !this.attacking){//a
       if(this.moveCheck('lw')){
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
@@ -417,7 +417,7 @@ class pc{
         }
       }
     }
-    if (keyIsDown(ctrlListens.rwKey)){//d
+    if (keyIsDown(ctrlListens.rwKey) && !this.attacking){//d
       if(this.moveCheck('rw')){
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
@@ -793,7 +793,7 @@ class spritesheet{
 }
 
 class ai{
-  constructor(x, y, z, angle, speed, hp, linkedNtt, mode, weapon, xp){
+  constructor(x, y, z, angle, speed, hp, linkedNtt, mode, weapon, xp, {musicOverride = false}){
     this.x = x
     this.y = y
     this.z = z
@@ -808,6 +808,7 @@ class ai{
     this.attackFrame = 0
     this.xp = xp
     this.maxHp = hp
+    this.music = musicOverride
   }
 
   chooseGoal({playerQ = true}){
@@ -1339,7 +1340,7 @@ function saveGame(){
     objects = Object.assign({}, objects)
     objects = Object.values(objects)
     for (let j of i.AIs){
-      AIs.push(new ai(j.x, j.y, j.z, j.angle, j.speed, j.hp, j.linkedNtt, j.mode, j.weapon, j.xp))
+      AIs.push(new ai(j.x, j.y, j.z, j.angle, j.speed, j.hp, j.linkedNtt, j.mode, j.weapon, j.xp, {musicOverride: j.music}))
     }
     AIs = Object.assign({}, AIs)
     AIs = Object.values(AIs)
@@ -1454,6 +1455,7 @@ let atkDag
 let atkHit
 let defaultMusic
 let battleMusic1
+let bossMusic1
 //more general?
 let gameState = 'menu'
 let prevState
@@ -1504,62 +1506,61 @@ let battleQuery
 let playerAudioPos
 
 function preload(){
-  font = loadFont('COMIC.ttf')
-  blank = loadImage('blank.png')
+  font = loadFont('assets/fonts/COMIC.ttf')
+  blank = loadImage('assets/blank.png')
   //entity spritesheets
-  skeleLeathDagSprite = loadImage('skeleLeathDagSprite.png')
-  skeleDagSprite = loadImage('skeleDagSprite.png')
-  skeleSwordSprite = loadImage('skeleSwordSprite.png')
-  droppedSprite = loadImage('droppedSprite.png')
-  potionSprite = loadImage('potion.png')
-  corpseSprite = loadImage('corpse.png')
+  skeleLeathDagSprite = loadImage('assets/spritesheets/entity/skeleLeathDagSprite.png')
+  skeleDagSprite = loadImage('assets/spritesheets/entity/skeleDagSprite.png')
+  skeleSwordSprite = loadImage('assets/spritesheets/entity/skeleSwordSprite.png')
+  droppedSprite = loadImage('assets/spritesheets/entity/droppedSprite.png')
+  potionSprite = loadImage('assets/spritesheets/entity/potion.png')
+  corpseSprite = loadImage('assets/spritesheets/entity/corpse.png')
   //walls and floors
-  brick = loadImage('brickTemp.png')
-  tallWall = loadImage('tallWall.png')
-  stone = loadImage('stone.png')
-  gravelled = loadImage('gravelled.png')
-  wideGravel = loadImage('wideGravel.png')
-  bark = loadImage('bark.png')
-  trunk = loadImage('trunk.png')
-  stoneWDoor = loadImage('stoneWDoor.png')
-  woodPlanks = loadImage('woodPlanks.png')
-  planksWDoor = loadImage('planksWDoor.png')
-  darkPlanks = loadImage('darkerPlanks.png')
+  stone = loadImage('assets/textures/stone.png')
+  gravelled = loadImage('assets/textures/gravelled.png')
+  wideGravel = loadImage('assets/textures/wideGravel.png')
+  bark = loadImage('assets/textures/bark.png')
+  trunk = loadImage('assets/textures/trunk.png')
+  stoneWDoor = loadImage('assets/textures/stoneWDoor.png')
+  woodPlanks = loadImage('assets/textures/woodPlanks.png')
+  planksWDoor = loadImage('assets/textures/planksWDoor.png')
+  darkPlanks = loadImage('assets/textures/darkerPlanks.png')
   //weapons
-  swordSprite = loadImage('sword1.png')
-  fistSprite = loadImage('punch.png')
-  axeSprite = loadImage('axe.png')
-  daggerSprite = loadImage('dagger.png')
+  swordSprite = loadImage('assets/spritesheets/weapon/sword1.png')
+  fistSprite = loadImage('assets/spritesheets/weapon/punch.png')
+  axeSprite = loadImage('assets/spritesheets/weapon/axe.png')
+  daggerSprite = loadImage('assets/spritesheets/weapon/dagger.png')
   //buttons
-  beginButt = loadImage('beginButton.png')
-  settingsButt = loadImage('settingsButton.png')
-  loadButt = loadImage('deathButton.png')
-  crossImg =  loadImage('exitButton.png')
-  upButton = loadImage('upButton.png')
-  downButton = loadImage('downButton.png')
+  beginButt = loadImage('assets/buttons/beginButton.png')
+  settingsButt = loadImage('assets/buttons/settingsButton.png')
+  loadButt = loadImage('assets/buttons/deathButton.png')
+  crossImg =  loadImage('assets/buttons/exitButton.png')
+  upButton = loadImage('assets/buttons/upButton.png')
+  downButton = loadImage('assets/buttons/downButton.png')
   //inventory icons
-  swordIcon = loadImage('swordIcon.png')
-  swordIcon2 = loadImage('swordIcon2.png')
-  punchIcon = loadImage('punchIcon.png')
-  axeIcon = loadImage('axeIcon.png')
-  teeIcon = loadImage('armourIcon.png')
-  potionIcon = loadImage('potionIcon.png')
-  bookIcon = loadImage('bookIcon.png')
-  daggerIcon = loadImage('daggerIcon.png')
+  swordIcon = loadImage('assets/icons/swordIcon.png')
+  swordIcon2 = loadImage('assets/icons/swordIcon2.png')
+  punchIcon = loadImage('assets/icons/punchIcon.png')
+  axeIcon = loadImage('assets/icons/axeIcon.png')
+  teeIcon = loadImage('assets/icons/armourIcon.png')
+  potionIcon = loadImage('assets/icons/potionIcon.png')
+  bookIcon = loadImage('assets/icons/bookIcon.png')
+  daggerIcon = loadImage('assets/icons/daggerIcon.png')
   //background images
-  menuBg = loadImage('mainMenuUI.png')
-  settingsBg = loadImage('settingsBg.png')
+  menuBg = loadImage('assets/mainMenuUI.png')
+  settingsBg = loadImage('assets/settingsBg.png')
   //audio
   userStartAudio()
   soundFormats('mp3')
-  footstepsGravel = loadSound('footstepsGravel')
-  footstepsWood = loadSound('footstepsWood')
-  atkGen = loadSound('atkGen')
-  atkSword = loadSound('atkSword')
-  atkDag = loadSound('atkDag')
-  atkHit = loadSound('atkHit')
-  defaultMusic = loadSound('Rest_Your_Head_with_Strings')
-  battleMusic1 = loadSound('Armies_on_the_Ground')
+  footstepsGravel = loadSound('assets/sfx/footstepsGravel')
+  footstepsWood = loadSound('assets/sfx/footstepsWood')
+  atkGen = loadSound('assets/sfx/atkGen')
+  atkSword = loadSound('assets/sfx/atkSword')
+  atkDag = loadSound('assets/sfx/atkDag')
+  atkHit = loadSound('assets/sfx/atkHit')
+  defaultMusic = loadSound('assets/music/Rest_Your_Head_with_Strings')
+  battleMusic1 = loadSound('assets/music/Armies_on_the_Ground')
+  bossMusic1 = loadSound('assets/music/All_the_Kings_Men')
 }
 
 function setup() {
@@ -1570,16 +1571,16 @@ function setup() {
   blankSpritesheet = new spritesheet(blank, 1, 1)
   droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
   potionSpritesheet = new spritesheet(potionSprite, 64, 64)
-  corpseSpritesheet = new spritesheet(corpseSprite, 44, 50)
+  corpseSpritesheet = new spritesheet(corpseSprite, 30, 39)
   punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str', 1, {})
   defSword = new weapon('blunt sword', 10, swordSprite, 5, 2, [], swordIcon, 'str', 2, {swingSound: atkSword})
   dagger = new weapon('iron dagger', 5, daggerSprite, 3, 2, [], daggerIcon, 'dex', 3, {swingSound: atkDag})
   nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex', 1, {})
-  axe = new weapon('battleaxe', 18, axeSprite, 6, 4, [], axeIcon, 'str', 1, {swingSound: atkSword})
+  axe = new weapon('battleaxe', 18, axeSprite, 8, 5, [], axeIcon, 'str', 1, {swingSound: atkSword})
   defArmour = new apparel('ragged clothes', 2, teeIcon)
   ironArmour = new apparel('iron armour', 5, teeIcon)
   healthPot = new consumable('health potion', 'heal25', 'a bottle of a healing elixir', potionIcon)
-  loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['hello', '[the rest is unreadable]'])
+  loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['Hello journal, \n I know', '[the rest is unreadable]'])
   allMusic = [defaultMusic, battleMusic1]
   allSfx = [footstepsGravel, footstepsWood, atkDag, atkGen, atkHit, atkSword]
   canvas = createCanvas(1024, 576, WEBGL);
@@ -1656,7 +1657,7 @@ function setup() {
     new floor(600, 1800, 7000, -200, 2200, 30, gravelled, {}), new floor(1200, 1800, 7450, -250, 2600, 0, gravelled, {}),
     new floor(750, 1500, 8425, -300, 2500, 0, gravelled, {}), new floor(2500, 1800, 9600, -350, 2000, -30, gravelled, {}),
     new floor(1500, 150, 10075, -200, 1750, 90, bark, {}), new floor(1000, 3000, 10000, -400, 400, 0, gravelled, {}),
-    new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(500, 2000, 8100, -500, -500, 45, gravelled, {}),
+    new floor(2000, 1500, 9500, -450, -1500, 0, gravelled, {}), new floor(600, 2000, 8100, -500, -500, 45, gravelled, {}),
     new floor(800, 1000, 7000, -550, 400, 30, gravelled, {}), new floor(1000, 3000, 6850, -600, 1700, 0, gravelled, {}),
     new floor(2000, 2000, 6700, -650, 3900, 0, gravelled, {}), new floor(4000, 6000, 5400, -650, 7900, 0, gravelled, {}),
     new floor(1200, 1300, 7580, -600, 5300, -15, gravelled, {}),
@@ -1679,8 +1680,8 @@ function setup() {
     new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), {canCollide: false}),
     new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), {canCollide: false})
   ], [
-    new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11),
-    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11)
+    new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11, {}), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11, {}),
+    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {})
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
@@ -1754,6 +1755,7 @@ function setup() {
   cam.centerZ += player.z
   cam.eyeZ += player.z
   xpToNextLevel = 100
+  player.hotbar[0] = axe
   uiCam.ortho()
   playerAudioPos = new p5.Panner3D()
   playerAudioPos.set(player.x, player.y, player.z)
@@ -1789,12 +1791,25 @@ function draw() {
         if (currentCell.bgMusic.isPlaying()){
           world[currentCellNo].bgMusic.pause()
         }
-        if (!battleMusic1.isPlaying()){
-          battleMusic1.play()
+        for (let i of currentCell.AIs){
+          if (i.music != false){
+            if (i.mode == 'h' || i.mode == 'm' || i.mode == 'a' && !i.music.isPlaying()){
+              i.music.play()
+              break
+            }
+          }
+          else if (i == currentCell.AIs[currentCell.AIs.length - 1] && !battleMusic1.isPlaying()){
+            battleMusic1.play()
+          }
         }
       }
       else if (!currentCell.bgMusic.isPlaying()){
         battleMusic1.stop()
+        for (let i of currentCell.AIs){
+          if (i.music != false){
+            i.music.stop()
+          }
+        }
         currentCell.bgMusic.play()
       }
       cam.pan(0)
