@@ -1641,7 +1641,10 @@ function setup() {
     new boundary(6000, 5800, 6300, 7000, stone, 600, -650), new boundary(6300, 7000, 6400, 8600, stone, 600, -650),
     new boundary(6400, 8600, 6000, 9500, stone, 600, -650), new boundary(5600, 9500, 4900, 9200, stone, 600, -650),
     new boundary(4900, 9200, 4400, 7800, stone, 600, -650), new boundary(4400, 7800, 4500, 6700, stone, 600, -650), 
-    new boundary(4500, 6700, 5500, 5800, stone, 600, -650)
+    new boundary(4500, 6700, 5500, 5800, stone, 600, -650), new boundary(6000, 9500, 5600, 9500, stone, 200, -250),
+    //after battle room
+    new boundary(6000, 9500, 6000, 10600, stone, 400, -650), new boundary(5600, 9500, 5500, 10300, stone, 400, -650),
+    new boundary(6000, 10600, 6150, 11200, stone, 400, -600), new boundary(5500, 10300, 5250, 11300, stone, 400, -600)
   ], [
     new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2])
   ], [
@@ -1663,7 +1666,11 @@ function setup() {
     new floor(2500, 2000, 9200, -50, -2000, 0, stone, {}), new floor(1700, 500, 8500, -100, -1000, 15, stone, {}),
     new floor(2000, 2000, 7800, -150, -250, 30, stone, {}), new floor(1000, 1000, 7000, -250, 400, 30, stone, {}), 
     new floor(1500, 2700, 6850, -300, 1700, 15, stone, {}), new floor(2000, 2400, 6700, -350, 3700, 0, stone, {}),
-    new floor(4000, 6000, 5400, -50, 7900, 0, stone, {}) , new floor(4000, 1000, 6800, -300, 5300, 0, stone, {})
+    new floor(4000, 6000, 5400, -50, 7900, 0, stone, {}) , new floor(4000, 1000, 6800, -300, 5300, 0, stone, {}),
+    //after battle room
+    new floor(1000, 1500, 5700, -600, 10800, 0, gravelled, {}),
+    //ceiling o'th'same
+    new floor(1000, 1400, 5700, -250, 10200, 0, stone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
     new entity(6000, -650, 7600, skeleLeathDagSpritesheet, 75, 175, false, [], 1, new inventory([dagger], [defArmour], [healthPot]), {}),
