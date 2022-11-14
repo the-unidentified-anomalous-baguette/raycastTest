@@ -5,6 +5,8 @@ let purple = [150, 10, 200]
 let dGrey = [30, 30, 30]
 let brown = [100, 50, 0]
 
+//extend map: this is the real main priority
+
 function universalSwitch(event, {data = null}){
   switch (event){
     case 'beginGame':
@@ -13,7 +15,6 @@ function universalSwitch(event, {data = null}){
       break
     case 'settings':
       prevState = gameState
-      console.log(prevState)
       gameState = 'settings'
       exitPointerLock()
       currentCell.bgMusic.pause()
@@ -171,6 +172,42 @@ function universalSwitch(event, {data = null}){
       for (let i of data){
         if (currentCell.AIs[i].mode != 'd'){
           currentCell.AIs[i].mode = 'h'
+        }
+      }
+      break
+    case 'musicDn':
+      if (musicGain > 0){
+        musicGain -= 0.1
+        musicGain = Math.floor(musicGain * 10)/10
+        for (let i of allMusic){
+          i.setVolume(musicGain)
+        }
+      }
+      break
+    case 'musicUp':
+      if (musicGain < 1){
+        musicGain += 0.1
+        musicGain = Math.floor(musicGain * 10)/10
+        for (let i of allMusic){
+          i.setVolume(musicGain)
+        }
+      }
+      break
+    case 'sfxDn':
+      if (sfxGain > 0){
+        sfxGain -= 0.1
+        sfxGain = Math.floor(sfxGain * 10)/10
+        for (let i of allSfx){
+          i.setVolume(sfxGain)
+        }
+      }
+      break
+    case 'sfxUp':
+      if (sfxGain < 1){
+        sfxGain += 0.1
+        sfxGain = Math.floor(sfxGain * 10)/10
+        for (let i of allSfx){
+          i.setVolume(sfxGain)
         }
       }
       break
@@ -1117,7 +1154,7 @@ class cell{
 }
 
 class weapon{
-  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon, scaleStat, scaleAbility){
+  constructor(name, damage, spriteSheet, aF, dF, spriteSizes, icon, scaleStat, scaleAbility, {swingSound = atkGen}){
     this.damage = damage
     this.spriteSheet = spriteSheet
     this.aF = aF
@@ -1127,6 +1164,7 @@ class weapon{
     this.icon = icon
     this.scaleStat = scaleStat
     this.scaleAbility = scaleAbility
+    this.swingSound = swingSound
   }
 }
 
@@ -1257,7 +1295,7 @@ function saveGame(){
   let apparels = []
   let usables = []
   for (let i of player.inventory.weapons){
-    weapons.push(new weapon(i.name, i.damage, i.spriteSheet, i.aF, i.dF, i.spriteSizes, i.icon, i.scaleStat, i.scaleAbility))
+    weapons.push(new weapon(i.name, i.damage, i.spriteSheet, i.aF, i.dF, i.spriteSizes, i.icon, i.scaleStat, i.scaleAbility, {swingSound: i.swingSound}))
   }
   weapons = Object.assign({}, weapons)
   weapons = Object.values(weapons)
@@ -1284,7 +1322,7 @@ function saveGame(){
     let grid = []
     let dialogueBg = Object.assign({}, i.dialogueBg)
     let fogColour = Object.assign({}, i.fogColour)
-    let bgMusic = Object.assign({}, i.bgMusic)
+    let bgMusic = i.bgMusic
     for (let j of i.walls){
       walls.push(new boundary(j.x1, j.z1, j.x2, j.z2, j.texture, j.height, j.base))
     }
@@ -1358,10 +1396,12 @@ let ctrlListens
 let changeKey = 'nullRef'
 //spritesheets and images
 //entity spritesheets
-let impSprite
-let impSpritesheet
-let chibiSprite
-let chibiSpritesheet
+let skeleLeathDagSprite
+let skeleLeathDagSpritesheet
+let skeleDagSprite
+let skeleDagSpritesheet
+let skeleSwordSprite
+let skeleSwordSpritesheet
 let droppedSprite
 let droppedSpritesheet
 let blank
@@ -1408,6 +1448,10 @@ let settingsBg
 //audio
 let footstepsGravel
 let footstepsWood
+let atkGen
+let atkSword
+let atkDag
+let atkHit
 let defaultMusic
 let battleMusic1
 //more general?
@@ -1424,6 +1468,10 @@ let droppedInv
 let entitiesToDelete
 let delIndex
 let loreShown
+let musicGain = 1
+let sfxGain = 1
+let allSfx
+let allMusic
 //cells
 let cell1
 let cell2
@@ -1459,8 +1507,9 @@ function preload(){
   font = loadFont('COMIC.ttf')
   blank = loadImage('blank.png')
   //entity spritesheets
-  impSprite = loadImage('imp.png')
-  chibiSprite = loadImage('chibiSprite.png')
+  skeleLeathDagSprite = loadImage('skeleLeathDagSprite.png')
+  skeleDagSprite = loadImage('skeleDagSprite.png')
+  skeleSwordSprite = loadImage('skeleSwordSprite.png')
   droppedSprite = loadImage('droppedSprite.png')
   potionSprite = loadImage('potion.png')
   corpseSprite = loadImage('corpse.png')
@@ -1505,29 +1554,34 @@ function preload(){
   soundFormats('mp3')
   footstepsGravel = loadSound('footstepsGravel')
   footstepsWood = loadSound('footstepsWood')
+  atkGen = loadSound('atkGen')
+  atkSword = loadSound('atkSword')
+  atkDag = loadSound('atkDag')
+  atkHit = loadSound('atkHit')
   defaultMusic = loadSound('Rest_Your_Head_with_Strings')
   battleMusic1 = loadSound('Armies_on_the_Ground')
 }
 
 function setup() {
   ctrlListens = new keyGroup(87, 83, 65, 68, 72, 69, 76, 32)
-  battleMusic1.setVolume(0.1)
-  defaultMusic.setVolume(0.1)
-  impSpritesheet = new spritesheet(impSprite, 42, 61)
-  chibiSpritesheet = new spritesheet(chibiSprite, 44, 50)
+  skeleLeathDagSpritesheet = new spritesheet(skeleLeathDagSprite, 44, 50)
+  skeleDagSpritesheet = new spritesheet(skeleDagSprite, 44, 52)
+  skeleSwordSpritesheet = new spritesheet(skeleSwordSprite, 90, 67)
   blankSpritesheet = new spritesheet(blank, 1, 1)
   droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
   potionSpritesheet = new spritesheet(potionSprite, 64, 64)
   corpseSpritesheet = new spritesheet(corpseSprite, 44, 50)
-  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str', 1)
-  defSword = new weapon('blunt sword', 10, swordSprite, 3, 2, [], swordIcon, 'str', 2)
-  dagger = new weapon('iron dagger', 5, daggerSprite, 3, 2, [], daggerIcon, 'dex', 3)
-  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex', 1)
-  axe = new weapon('battleaxe', 18, axeSprite, 6, 4, [], axeIcon, 'str', 1)
+  punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str', 1, {})
+  defSword = new weapon('blunt sword', 10, swordSprite, 5, 2, [], swordIcon, 'str', 2, {swingSound: atkSword})
+  dagger = new weapon('iron dagger', 5, daggerSprite, 3, 2, [], daggerIcon, 'dex', 3, {swingSound: atkDag})
+  nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex', 1, {})
+  axe = new weapon('battleaxe', 18, axeSprite, 6, 4, [], axeIcon, 'str', 1, {swingSound: atkSword})
   defArmour = new apparel('ragged clothes', 2, teeIcon)
   ironArmour = new apparel('iron armour', 5, teeIcon)
   healthPot = new consumable('health potion', 'heal25', 'a bottle of a healing elixir', potionIcon)
   loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ['hello', '[the rest is unreadable]'])
+  allMusic = [defaultMusic, battleMusic1]
+  allSfx = [footstepsGravel, footstepsWood, atkDag, atkGen, atkHit, atkSword]
   canvas = createCanvas(1024, 576, WEBGL);
   canvas.parent('container')
   angleMode(DEGREES);
@@ -1612,9 +1666,9 @@ function setup() {
     new floor(4000, 6000, 5400, -50, 7900, 0, stone, {}) , new floor(4000, 1000, 6800, -300, 5300, 0, stone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
-    new entity(6000, -650, 7600, chibiSpritesheet, 75, 175, false, [], 1, new inventory([defSword], [defArmour], [healthPot]), {}),
-    new entity(6000, -650, 7600, chibiSpritesheet, 75, 175, false, [], 2, new inventory([defSword], [ironArmour], []), {}),
-    new entity(6000, -650, 7600, chibiSpritesheet, 75, 175, false, [], 3, new inventory([axe], [defArmour], []), {}),
+    new entity(6000, -650, 7600, skeleLeathDagSpritesheet, 75, 175, false, [], 1, new inventory([dagger], [defArmour], [healthPot]), {}),
+    new entity(6000, -650, 7600, skeleSwordSpritesheet, 75, 175, false, [], 2, new inventory([defSword], [ironArmour], []), {}),
+    new entity(6000, -650, 7600, skeleDagSpritesheet, 75, 175, false, [], 3, new inventory([defSword], [ironArmour], []), {}),
     new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), {canCollide: false}),
     new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), {canCollide: false})
   ], [
@@ -1806,6 +1860,7 @@ function draw() {
       }
       if (!mouseWasPressed && mouseIsPressed && player.attacking == false){
         player.attacking = true
+        player.hotbar[player.weapon].swingSound.play()
       }
       if (player.attacking == true){
         player.attackFrame += 1
@@ -2045,7 +2100,7 @@ function ui(){
     if (player.interactCheck()[0]){
       textSize(20)
       fill(red)
-      text('interact', 0, 10)
+      text('interact (' + keysList[ctrlListens['intKey']] + ')', 0, 10)
     }
   pop()
 }
@@ -2075,6 +2130,8 @@ function settingsUI(){
     new menuButton(-400, -150, 200, 25, 'lwKey', upButton, 64, 64), new menuButton(-400, -125, 200, 25, 'rwKey', upButton, 64, 64),
     new menuButton(-400, -100, 200, 25, 'jumpKey', upButton, 64, 64), new menuButton(-400, -75, 200, 25, 'invKey', upButton, 64, 64), 
     new menuButton(-400, -50, 200, 25, 'statKey', upButton, 64, 64), new menuButton(-400, -25, 200, 25, 'intKey', upButton, 64, 64), 
+    new menuButton(350, -200, 25, 25, 'musicDn', downButton, 64, 64), new menuButton(325, -200, 25, 25, 'musicUp', upButton, 64, 64),
+    new menuButton(350, -175, 25, 25, 'sfxDn', downButton, 64, 64), new menuButton(325, -175, 25, 25, 'sfxUp', upButton, 64, 64)
   ]
   let colourBool = 0
   let light = [216, 158, 99]
@@ -2085,8 +2142,13 @@ function settingsUI(){
     image(settingsBg, -512, -288)
     uiCam.setPosition(0, 0, 0)
     textSize(20)
-    fill (0)
-    text('Key bindings')
+    fill(255)
+    text('Key bindings', -300, -225)
+    text('Audio volume', 300, -225)
+    fill(0)
+    if (!mouseWasPressed && mouseIsPressed && changeKey != 'nullRef'){
+      changeKey = 'nullRef'
+    }
     for (let i of buttons){
       if (i.func.substring(i.func.length - 3) == 'Key'){
         colourBool = (changeKey == i.func)
@@ -2108,6 +2170,9 @@ function settingsUI(){
         i.executeFunc({})
       }
     }
+    fill(255)
+    text('Music: ' + musicGain * 10 + '/10', 275, -195)
+    text('Sfx: ' + sfxGain * 10 + '/10', 275, -170)
   pop()
 }
 
