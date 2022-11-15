@@ -211,6 +211,10 @@ function universalSwitch(event, {data = null}){
         }
       }
       break
+    case 'boss1end':
+      cell1.walls[87].height = 0
+      cell1.walls[87].midY = 0
+      break
   }
 }
 
@@ -793,7 +797,7 @@ class spritesheet{
 }
 
 class ai{
-  constructor(x, y, z, angle, speed, hp, linkedNtt, mode, weapon, xp, {musicOverride = false}){
+  constructor(x, y, z, angle, speed, hp, linkedNtt, mode, weapon, xp, {musicOverride = false, onDeath = 'none'}){
     this.x = x
     this.y = y
     this.z = z
@@ -809,6 +813,7 @@ class ai{
     this.xp = xp
     this.maxHp = hp
     this.music = musicOverride
+    this.onDeath = onDeath
   }
 
   chooseGoal({playerQ = true}){
@@ -1115,6 +1120,7 @@ class ai{
         currentCell.objects[this.linkedNtt].collisive = false
         currentCell.objects[this.linkedNtt].interactible = 'loot'
         player.xp += this.xp
+        universalSwitch(this.onDeath, {})
       }
       currentCell.objects[this.linkedNtt].hp = this.hp
       currentCell.objects[this.linkedNtt].maxHp = this.maxHp
@@ -1645,9 +1651,23 @@ function setup() {
     new boundary(4500, 6700, 5500, 5800, stone, 600, -650), new boundary(6000, 9500, 5600, 9500, stone, 200, -250),
     //after battle room
     new boundary(6000, 9500, 6000, 10600, stone, 400, -650), new boundary(5600, 9500, 5500, 10300, stone, 400, -650),
-    new boundary(6000, 10600, 6150, 11200, stone, 400, -600), new boundary(5500, 10300, 5250, 11300, stone, 400, -600)
+    new boundary(6000, 10600, 6150, 11200, stone, 400, -600), new boundary(5500, 10300, 5250, 11300, stone, 400, -600),
+    new boundary(5250, 11300, 5200, 11800, stone, 400, -600), new boundary(6150, 11200, 5800, 11800, stone, 400, -600),
+    new boundary(5200, 11800, 3800, 11900, stone, 350, -550), new boundary(5800, 11800, 6200, 12600, stone, 350, -550),
+    new boundary(3800, 11900, 3200, 13000, stone, 350, -550), new boundary(6200, 12600, 6000, 13200, stone, 350, -550),
+    new boundary(6000, 13200, 5200, 13700, stone, 350, -550), new boundary(5200, 13700, 3200, 13300, stone, 350, -550),
+    new boundary(3200, 13300, 3200, 13000, stone, 350, -550),
+    //boss room pillar
+    new boundary(4800, 12700, 4850, 12700, woodPlanks, 350, -550), new boundary(4850, 12700, 4850, 12750, woodPlanks, 350, -550),
+    new boundary(4850, 12750, 4800, 12750, woodPlanks, 350, -550), new boundary(4800, 12750, 4800, 12700, woodPlanks, 350, -550),
+    //the moment I gave up on keeping this sorted
+    new boundary(5700, 2500, 7700, 2500, stone, 100, -350), new boundary(5700, 4900, 7700, 4900, stone, 300, -350),
+    new boundary(6350, 3200, 7350, 3200, wideGravel, 50, -650), new boundary(6832.212, 4827.44, 7991.323, 4516.857, wideGravel, 50, -650),
+    new boundary(4800, 5800, 8800, 5800, stone, 250, -300), new boundary(5200, 10050, 6200, 10050, wideGravel, 50, -650),
+    new boundary(3200, 10900, 8200, 10900, wideGravel, 50, -600), new boundary(5200, 10900, 6200, 10900, stone, 50, -250)
   ], [
-    new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2])
+    //new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2]),
+    //new triggerWall(5200, 11800, 5800, 11800, 175, -550, 'triggerCombat', [3])
   ], [
     //beginning room
     new floor(5000, 4000, 2500, 0, 2000, 0, gravelled, {}), new floor(5000, 4000, 2500, 2000, 2000, 180, stone, {}),
@@ -1671,24 +1691,31 @@ function setup() {
     //after battle room
     new floor(1000, 1500, 5700, -600, 10800, 0, gravelled, {}),
     //ceiling o'th'same
-    new floor(1000, 1400, 5700, -250, 10200, 0, stone, {})
+    new floor(1000, 1400, 5700, -250, 10200, 0, stone, {}),
+    //boss room
+    new floor(5000, 3000, 5700, -550, 12400, 0, gravelled, {}),
+    //boss room ceiling
+    new floor(5000, 3000, 5700, -200, 12400, 0, stone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), {canCollide: false}),
     new entity(6000, -650, 7600, skeleLeathDagSpritesheet, 75, 175, false, [], 1, new inventory([dagger], [defArmour], [healthPot]), {}),
     new entity(6000, -650, 7600, skeleSwordSpritesheet, 75, 175, false, [], 2, new inventory([defSword], [ironArmour], []), {}),
     new entity(6000, -650, 7600, skeleDagSpritesheet, 75, 175, false, [], 3, new inventory([defSword], [ironArmour], []), {}),
     new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), {canCollide: false}),
-    new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), {canCollide: false})
+    new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), {canCollide: false}),
+    new entity(0, 0, 0, skeleLeathDagSpritesheet, 100, 300, false, [], 6, new inventory([], [], []), {})
   ], [
     new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11, {}), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11, {}),
-    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {})
+    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 1, 6, 'i', nmeSword, 75, {musicOverride: bossMusic1, onDeath: 'boss1end'})
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
     new pathNode(7850, 2100, [5, 7], 6), new pathNode(8400, 2300, [6, 8], 7), new pathNode(9750, 1800, [7], 8),
     new pathNode(10100, 875, [10], 9), new pathNode(10100, -300, [9, 11], 10), new pathNode(9800, -1800, [10, 12], 11),
     new pathNode(8650, -1050, [11, 13], 12), new pathNode(7700, -150, [12, 14], 13), new pathNode(7100, 400, [13, 15], 14),
-    new pathNode(6700, 1300, [14, 16], 15), new pathNode(6700, 4000, [15, 17], 16), new pathNode(5200, 6900, [16], 17)
+    new pathNode(6700, 1300, [14, 16], 15), new pathNode(6700, 4000, [15, 17], 16), new pathNode(5200, 6900, [16, 18], 17),
+    new pathNode(5800, 9800, [17, 19], 18), new pathNode(5800, 10500, [18, 20], 19), new pathNode(5600, 12400, [19, 21, 22], 20),
+    new pathNode(4800, 13200, [20, 22, 23], 21), new pathNode(4300, 12250, [20, 21], 22), new pathNode(3100, 13200, [21], 23)
   ], stone, dGrey, defaultMusic)
   cell2 = new cell([
     //walls
@@ -1792,8 +1819,8 @@ function draw() {
           world[currentCellNo].bgMusic.pause()
         }
         for (let i of currentCell.AIs){
-          if (i.music != false){
-            if (i.mode == 'h' || i.mode == 'm' || i.mode == 'a' && !i.music.isPlaying()){
+          if (i.music != false && (i.mode == 'h' || i.mode == 'm' || i.mode == 'a')){
+            if (!i.music.isPlaying()){
               i.music.play()
               break
             }
@@ -1804,7 +1831,7 @@ function draw() {
         }
       }
       else if (!currentCell.bgMusic.isPlaying()){
-        battleMusic1.stop()
+        bossMusic1.stop()
         for (let i of currentCell.AIs){
           if (i.music != false){
             i.music.stop()
