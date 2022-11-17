@@ -222,6 +222,7 @@ function universalSwitch(event, { data = null }) {
       cell1.walls[95].height = 0
       cell1.walls[95].midY = 0
       cell1.walls[100].height = 50
+      cell1.walls[100].midY = 525
       break
     case 'talkSkip':
       talkDepth += data
@@ -1435,6 +1436,7 @@ let npcSprite
 let npcSpritesheet
 //walls and floors
 let stone
+let widestone
 let largeStone
 let gravelled
 let wideGravel
@@ -1543,6 +1545,7 @@ function preload() {
   npcSprite = loadImage('assets/spritesheets/entity/npc1Sprite.png')
   //walls and floors
   stone = loadImage('assets/textures/stone.png')
+  wideStone = loadImage('assets/textures/wideStone.png')
   largeStone = loadImage('assets/textures/largeStone.png')
   gravelled = loadImage('assets/textures/gravelled.png')
   wideGravel = loadImage('assets/textures/wideGravel.png')
@@ -1662,12 +1665,12 @@ function setup() {
     new boundary(6832.212, 4827.44, 7991.323, 4516.857, wideGravel, 50, -650), new boundary(5200, 10050, 6200, 10050, wideGravel, 50, -650),
     new boundary(3200, 10900, 8200, 10900, wideGravel, 50, -600),
     // first corridor ceiling edges
-    new boundary(8603.491, 327.431, 7577.431, 3146.509, stone, 50, 350), new boundary(6516.31, 821.074, 5671.074, 2633.69, stone, 100, 400),
-    new boundary(9500, 2850, 9500, 850, stone, 350, 50), new boundary(7950, -1000, 10450, -1000, stone, 100, -50),
-    new boundary(7743.668, -1461.478, 9385.742, -1021.485, stone, 50, -100), new boundary(7433.975, -1616.025, 9166.025, -616.025, stone, 50, -150),
-    new boundary(7683.013, 216.987, 6816.987, -283.013, stone, 100, -250), new boundary(7923.85, 590.114, 6474.961, 201.886, stone, 50, -300),
-    new boundary(5700, 2500, 7700, 2500, stone, 100, -350), new boundary(5700, 4900, 7700, 4900, stone, 300, -350),
-    new boundary(4800, 5800, 8800, 5800, stone, 250, -300), new boundary(5200, 10900, 6200, 10900, stone, 50, -250),
+    new boundary(8603.491, 327.431, 7577.431, 3146.509, wideStone, 50, 350), new boundary(6516.31, 821.074, 5671.074, 2633.69, wideStone, 100, 400),
+    new boundary(9500, 2850, 9500, 850, wideStone, 350, 50), new boundary(7950, -1000, 10450, -1000, wideStone, 100, -50),
+    new boundary(7743.668, -1461.478, 9385.742, -1021.485, wideStone, 50, -100), new boundary(7433.975, -1616.025, 9166.025, -616.025, wideStone, 50, -150),
+    new boundary(7683.013, 216.987, 6816.987, -283.013, wideStone, 100, -250), new boundary(7923.85, 590.114, 6474.961, 201.886, wideStone, 50, -300),
+    new boundary(5700, 2500, 7700, 2500, wideStone, 100, -350), new boundary(5700, 4900, 7700, 4900, wideStone, 300, -350),
+    new boundary(4800, 5800, 8800, 5800, wideStone, 250, -300), new boundary(5200, 10900, 6200, 10900, wideStone, 50, -250),
     // first corridor log
     new boundary(10000, 2500, 10000, 1000, bark, 150, -350), new boundary(10150, 2500, 10150, 1000, bark, 150, -350), new boundary(10150, 2500, 10000, 2500, trunk, 150, -350),
     new boundary(10000, 1000, 10150, 1000, trunk, 150, -350),
@@ -1692,10 +1695,13 @@ function setup() {
     new boundary(4800, 12700, 4850, 12700, woodPlanks, 350, -550), new boundary(4850, 12700, 4850, 12750, woodPlanks, 350, -550),
     new boundary(4850, 12750, 4800, 12750, woodPlanks, 350, -550), new boundary(4800, 12750, 4800, 12700, woodPlanks, 350, -550),
     //floor edges there
-    new boundary(3200, 13300, 3200, 13000, wideGravel, 0, -550),
+    new boundary(3200, 13300, 3200, 13000, wideGravel, 0, -550), new boundary(2000, 13000, 2000, 13300, woodPlanks, 50, -500),
     //post boss corridor
     new boundary(3200, 13300, 2000, 13300, stone, 400, -550), new boundary(3200, 13000, 2000, 13000, stone, 400, -550),
-    new boundary(2000, 13000, 1000, 14000, stone, 400, -550), new boundary(1000, 14000, 1000, 17000, stone, 400, -550)
+    new boundary(2000, 13000, 1000, 14000, stone, 400, -550), new boundary(1000, 14000, 1000, 17000, stone, 400, -550),
+    new boundary(2000, 13300, 2000, 17000, stone, 400, -550), new boundary(2000, 17000, 1000, 17000, stone, 400, -550),
+    //ceiling edges there
+    new boundary(3200, 13300, 3200, 13000, wideStone, 50, -200)
   ], [
     // new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2]),
     // new triggerWall(5200, 11800, 5800, 11800, 175, -550, 'triggerCombat', [3])
@@ -1717,7 +1723,7 @@ function setup() {
     new floor(2000, 2000, 7000, 400, 2150, 25, stone, {}), new floor(1000, 4000, 10000, 50, 850, 0, stone, {}),
     new floor(2500, 2000, 9200, -50, -2000, 0, stone, {}), new floor(1700, 500, 8500, -100, -1000, 15, stone, {}),
     new floor(2000, 2000, 7800, -150, -250, 30, stone, {}), new floor(1000, 1000, 7000, -250, 400, 30, stone, {}),
-    new floor(1500, 2700, 6850, -300, 1700, 15, stone, {}), new floor(2000, 2400, 6700, -350, 3700, 0, stone, {}),
+    new floor(1500, 2700, 6850, -300, 1700, 15, stone, {}), new floor(2000, 2400, 6700, -350, 3700, 0, largeStone, {}),
     new floor(4000, 6000, 5400, -50, 7900, 0, largeStone, {}), new floor(4000, 1000, 6800, -300, 5300, 0, stone, {}),
     //after battle room
     new floor(1000, 1500, 5700, -600, 10800, 0, gravelled, {}),
@@ -1728,7 +1734,8 @@ function setup() {
     //boss room ceiling
     new floor(5000, 3000, 5700, -200, 12400, 0, largeStone, {}),
     //post boss room floors
-    new floor(1600, 500, 2400, -500, 13150, 0, gravelled, {})
+    new floor(1600, 500, 2400, -500, 13150, 0, gravelled, {}), new floor(1000, 4000, 1500, -450, 15000, 0, woodPlanks, { sound: footstepsWood }),
+    new floor(1000, 4000, 1500, -150, 15000, 0, largeStone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), { canCollide: false }),
     new entity(6000, -650, 7600, skeleLeathDagSpritesheet, 75, 175, false, [], 1, new inventory([dagger], [defArmour], [healthPot]), {}),
@@ -1736,10 +1743,19 @@ function setup() {
     new entity(6000, -650, 7600, skeleDagSpritesheet, 75, 175, false, [], 3, new inventory([defSword], [ironArmour], []), {}),
     new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), { canCollide: false }),
     new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), { canCollide: false }),
-    new entity(0, 0, 0, zombieBossSpritesheet, 100, 300, false, [], 6, new inventory([spear], [], []), {})
+    new entity(0, 0, 0, zombieBossSpritesheet, 100, 300, false, [], 6, new inventory([spear], [], []), {}),
+    new entity(100, 0, 450, npcSpritesheet, 75, 175, 'dialogue',
+      [
+        [['never seen'], ['Higher beings: these words are for you alone'], [''], ['']],
+        [['What?'], ['Thank you for playing the demo of Broken Legacy: the mortal tombs'], [''], ['']],
+        [['What?'], [''], [''], ['']]
+      ],
+      7, new inventory([dagger], [defArmour], [])
+    )
   ], [
     new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11, {}), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11, {}),
-    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 1, 6, 'i', nmeSword, 75, { musicOverride: bossMusic1, onDeath: 'boss1end' })
+    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 1, 6, 'i', nmeSword, 75, { musicOverride: bossMusic1, onDeath: 'boss1end' }),
+    new ai(1500, -450, 16900, 0, 15, 50, 7, 'i', dagger, 5, {})
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
