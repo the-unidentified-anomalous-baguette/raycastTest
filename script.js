@@ -223,9 +223,20 @@ function universalSwitch(event, { data = null }) {
       cell1.walls[95].midY = 0
       cell1.walls[100].height = 50
       cell1.walls[100].midY = 525
+      world[1].AIs[0].mode = 'h'
       break
     case 'talkSkip':
       talkDepth += data
+      break
+    case 'snstvtUp':
+      if (ctrlListens.snstvt < 10){
+        ctrlListens.snstvt += 1
+      }
+      break
+    case 'snstvtDn':
+      if (ctrlListens.snstvt > 0){
+        ctrlListens.snstvt -= 1
+      }
       break
   }
 }
@@ -470,7 +481,7 @@ class pc {
     if (keyIsDown(52)) {
       this.weapon = 3
     }
-    this.angleLR += movedX * (30 / frameRate()) * 0.1 * (1 - (2 * invertX))
+    this.angleLR += movedX * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt/10)) * (1 - (2 * invertX))
     if (this.angleLR > 360) {
       this.angleLR -= 360
     }
@@ -478,7 +489,7 @@ class pc {
       this.angleLR += 360
     }
     if (this.angleUD <= 75 && this.angleUD >= -89) {
-      this.angleUD -= movedY * (30 / frameRate()) * 0.1 * (1 - (2 * invertY))
+      this.angleUD -= movedY * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt/10)) * (1 - (2 * invertY))
       if (this.angleUD > 75) {
         this.angleUD = 75
       }
@@ -586,6 +597,7 @@ class pc {
         let t = ((x1 - x3) * (z3 - z4) - (z1 - z3) * (x3 - x4)) / den
         let u = ((x1 - x3) * (z1 - z2) - (z1 - z3) * (x1 - x2)) / den
         if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+          atkHit.play()
           return i
         }
       }
@@ -792,7 +804,7 @@ class entity {
         }
         break
     }
-    if (this.animation != 'd') {
+    if (this.animation != 'd' && this.animation != 'i') {
       fill(red)
       rect(0, (-this.height / 2) - 5, this.collWidth * (this.hp / this.maxHp), 5)
     }
@@ -1045,6 +1057,8 @@ class ai {
           this.path = []
           this.goal = []
           this.mode = 'm'
+          currentCell.objects[this.  linkedNtt].frame = 0
+          currentCell.objects[this.linkedNtt].animation = 'a'
           return true
         }
       }
@@ -1055,9 +1069,34 @@ class ai {
     }
   }
 
+  meleeCheckNVC() {
+    let hyp = dist(this.x, this.z, player.x, player.z)
+    if (hyp <= meleeMax && hyp >= meleeMin && player.y < this.y + currentCell.objects[this.linkedNtt].height && player.eyeLevel > this.y) { // if in melee range
+      for (let i of currentCell.walls) {
+        // checks if there's a wall in the way
+        if (intersectCheck([this.x, this.z], [player.x, player.z], [i.x1, i.z1], [i.x2, i.z2]) && i.base < this.y + currentCell.objects[this.linkedNtt].height && i.base + i.height > this.y + 50) {
+          return false
+        }
+        else if (i == currentCell.walls[currentCell.walls.length - 1]) {
+          return true
+        }
+      }
+    }
+    else {
+      return false
+    }
+  }
+
   fullPathfinding() {
     switch (this.mode) {
       case 'i':
+        currentCell.objects[this.linkedNtt].animation = 'i'
+        currentCell.objects[this.linkedNtt].x = this.x
+        currentCell.objects[this.linkedNtt].y = this.y
+        currentCell.objects[this.linkedNtt].z = this.z
+        currentCell.objects[this.linkedNtt].angle = this.angle
+        break
+      case 'n':
         currentCell.objects[this.linkedNtt].animation = 'i'
         currentCell.objects[this.linkedNtt].x = this.x
         currentCell.objects[this.linkedNtt].y = this.y
@@ -1093,11 +1132,14 @@ class ai {
         this.angle = angle
         this.mode = 'a'
         currentCell.objects[this.linkedNtt].angle = this.angle
+        currentCell.objects[this.linkedNtt].frame = 0
+        currentCell.objects[this.linkedNtt].animation = 'a'
+        console.log(currentCell.objects[this.linkedNtt].frame)
         break;
       case 'a': // attacking
         currentCell.objects[this.linkedNtt].animation = 'a'
         this.attackFrame += 0.25 //move through attack animation
-        if (this.attackFrame == this.weapon.dF && this.meleeCheck()) { //when the enemys weapon is at the point of damage
+        if (this.attackFrame == this.weapon.dF && this.meleeCheckNVC()) { //when the enemys weapon is at the point of damage
           let opp = this.x - player.x
           let adj = player.z - this.z
           let hyp = dist(this.x, this.z, player.x, player.z)
@@ -1115,9 +1157,11 @@ class ai {
         }
         if (this.attackFrame >= this.weapon.aF) {
           this.attackFrame = 0
+          currentCell.objects[this.linkedNtt].frame = this.attackFrame
           this.meleeCheck() //reset attack once complete
         }
         currentCell.objects[this.linkedNtt].frame = this.attackFrame
+        console.log(currentCell.objects[this.linkedNtt].frame)
         break
       case 'd': // dead
         currentCell.objects[this.linkedNtt].animation = 'd'
@@ -1230,7 +1274,7 @@ class statBlock {
 }
 
 class keyGroup {
-  constructor(fwKey, bwKey, lwKey, rwKey, invKey, intKey, statKey, jumpKey) {
+  constructor(fwKey, bwKey, lwKey, rwKey, invKey, intKey, statKey, jumpKey, snstvt) {
     this.fwKey = fwKey
     this.bwKey = bwKey
     this.lwKey = lwKey
@@ -1239,6 +1283,7 @@ class keyGroup {
     this.intKey = intKey
     this.statKey = statKey
     this.jumpKey = jumpKey
+    this.snstvt = snstvt
     this.nullRef = 0
   }
 }
@@ -1359,7 +1404,7 @@ function saveGame() {
     objects = Object.assign({}, objects)
     objects = Object.values(objects)
     for (let j of i.AIs) {
-      AIs.push(new ai(j.x, j.y, j.z, j.angle, j.speed, j.hp, j.linkedNtt, j.mode, j.weapon, j.xp, { musicOverride: j.music }))
+      AIs.push(new ai(j.x, j.y, j.z, j.angle, j.speed, j.hp, j.linkedNtt, j.mode, j.weapon, j.xp, { musicOverride: j.music, onDeath: j.onDeath }))
     }
     AIs = Object.assign({}, AIs)
     AIs = Object.values(AIs)
@@ -1597,7 +1642,7 @@ function preload() {
 }
 
 function setup() {
-  ctrlListens = new keyGroup(87, 83, 65, 68, 73, 69, 76, 32)
+  ctrlListens = new keyGroup(87, 83, 65, 68, 73, 69, 76, 32, 1)
   skeleLeathDagSpritesheet = new spritesheet(skeleLeathDagSprite, 44, 50)
   skeleDagSpritesheet = new spritesheet(skeleDagSprite, 44, 52)
   skeleSwordSpritesheet = new spritesheet(skeleSwordSprite, 90, 67)
@@ -1790,9 +1835,9 @@ function setup() {
     new entity(70, 100, -1420, potionSpritesheet, 64, 64, 'loot', ['delOnEmpty', 'hideOnEmpty'], 1, new inventory([], [], [healthPot]), { canCollide: false }),
     new entity(556, 0, -944, corpseSpritesheet, 88, 100, 'loot', ['', ''], 2, new inventory([defSword], [], [loreBook1]), { canCollide: false })
   ], [
-
+    new ai(556, 0, -944, 0, 5, 20, 2, 'n', nmeSword, 5, {})
   ], [
-
+    new pathNode(0, -1000, [1], 0), new pathNode(400, -1300, [0], 1)
   ], woodPlanks, brown, defaultMusic)
   cell3 = new cell([
     new boundary(-150, -100, 150, -100, stoneWDoor, 450, 0), new boundary(150, -100, 300, 50, stone, 450, 0),
@@ -1933,7 +1978,7 @@ function draw() {
           i.inventory.weapons.length == 0 && i.inventory.apparels.length == 0 && i.inventory.usables.length == 0) {
           i.interactible = false
           if (i.useData[1] == 'hideOnEmpty') {
-            i.spriteSheet = blankSpritesheet
+            i.spriteSheet = blankSprite
           }
           break
         }
@@ -2232,8 +2277,9 @@ function settingsUI() {
     new menuButton(-400, -150, 200, 25, 'lwKey', upButton, 64, 64), new menuButton(-400, -125, 200, 25, 'rwKey', upButton, 64, 64),
     new menuButton(-400, -100, 200, 25, 'jumpKey', upButton, 64, 64), new menuButton(-400, -75, 200, 25, 'invKey', upButton, 64, 64),
     new menuButton(-400, -50, 200, 25, 'statKey', upButton, 64, 64), new menuButton(-400, -25, 200, 25, 'intKey', upButton, 64, 64),
-    new menuButton(350, -200, 25, 25, 'musicDn', downButton, 64, 64), new menuButton(325, -200, 25, 25, 'musicUp', upButton, 64, 64),
-    new menuButton(350, -175, 25, 25, 'sfxDn', downButton, 64, 64), new menuButton(325, -175, 25, 25, 'sfxUp', upButton, 64, 64)
+    new menuButton(325, -200, 25, 25, 'musicDn', downButton, 64, 64), new menuButton(350, -200, 25, 25, 'musicUp', upButton, 64, 64),
+    new menuButton(325, -175, 25, 25, 'sfxDn', downButton, 64, 64), new menuButton(350, -175, 25, 25, 'sfxUp', upButton, 64, 64),
+    new menuButton(50, -200, 25, 25, 'snstvtDn', downButton, 64, 64), new menuButton(75, -200, 25, 25, 'snstvtUp', upButton, 64, 64)
   ]
   let colourBool = 0
   let light = [216, 158, 99]
@@ -2241,8 +2287,8 @@ function settingsUI() {
   push()
   textAlign(CENTER, CENTER)
   setCamera(uiCam)
-  image(settingsBg, -512, -288)
   uiCam.setPosition(0, 0, 0)
+  image(settingsBg, -512, -288)
   textSize(20)
   fill(255)
   text('Key bindings', -300, -225)
@@ -2273,8 +2319,10 @@ function settingsUI() {
     }
   }
   fill(255)
-  text('Music: ' + musicGain * 10 + '/10', 275, -195)
-  text('Sfx: ' + sfxGain * 10 + '/10', 275, -170)
+  textAlign(LEFT, CENTER)
+  text('Sensitivity: ' + ctrlListens.snstvt / 10, -100, -195)
+  text('Music: ' + musicGain * 10 + '/10', 200, -195)
+  text('Sfx: ' + sfxGain * 10 + '/10', 200, -170)
   pop()
 }
 
@@ -2323,7 +2371,6 @@ function dialogueUI(entity) {
     text(entity.useData[talkDepth + 1][0][i], 256, 100 * (i - 2) + 10, 400, 400)
   }
   for (let i of reactButtons) {
-    console.log(entity.useData[talkDepth + 1].length)
     i.executeFunc({ data: [entity, entity.useData[talkDepth + 1][3][reactButtons.indexOf(i)]] })
     if (talkDepth == entity.useData.length - 1) {
       break
