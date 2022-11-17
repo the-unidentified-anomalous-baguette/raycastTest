@@ -1795,7 +1795,7 @@ function setup() {
         [['What?'], ['Thank you for playing the demo of Broken Legacy: the mortal tombs'], [''], ['']],
         [['What?'], [''], [''], ['']]
       ],
-      7, new inventory([dagger], [defArmour], [])
+      7, new inventory([dagger], [defArmour], []), {}
     )
   ], [
     new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11, {}), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11, {}),
