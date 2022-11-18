@@ -110,7 +110,7 @@ function universalSwitch(event, { data = null }) {
     case 'exitInv':
       if (gameState == 'inventory') {
         if (droppedInv.weapons.length >= 1 || droppedInv.apparels.length >= 1 || droppedInv.usables.length >= 1) {
-          currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 8, 8, 'loot', 'delOnEmpty', 0, droppedInv, { canCollide: false }))
+          currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 8, 8, 'loot', ['delOnEmpty', 'hideOnEmpty'], 0, droppedInv, { canCollide: false }))
           currentCell.objects[currentCell.objects.length - 1].ogIndex = currentCell.objects.length - 1
         }
         droppedInv = new inventory([], [], [])
@@ -224,6 +224,7 @@ function universalSwitch(event, { data = null }) {
       cell1.walls[100].height = 50
       cell1.walls[100].midY = 525
       world[1].AIs[0].mode = 'h'
+      world[1].trigWalls = []
       break
     case 'talkSkip':
       talkDepth += data
@@ -237,6 +238,34 @@ function universalSwitch(event, { data = null }) {
       if (ctrlListens.snstvt > 0){
         ctrlListens.snstvt -= 1
       }
+      break
+    case 'finalNpcSelfChange':
+      world[0].objects[7].useData = [
+        [['never seen'], ['There are yet more monsters that you must slay'], [''], ['']],
+        [['Where?'], ['That, you must discover for yourself'], [''], ['']],
+        [['Then I must away', 'bye'], [''], [''], ['']]
+      ]
+      break
+    case 'secretNmeDie':
+      world[0].objects[7].useData = [
+        [['never seen'], ['Well done adventurer, the evils of this cave are now truly defeated'], [''], ['']],
+        [['Can I leave'], ['Sadly no, this cave is the only completed game area'], [''], ['']],
+        [['What?', 'Please stop breaking the fourth wall'], ['Do not overthink my words adventurer', 'And with that you have done the same'], [''], ['']],
+        [['Ok', 'Bye'], ['', ''], ['', ''], ['', '']]
+      ]
+      break
+    case 'cryForHelp':
+      gameState = 'dialogue'
+      interactCheckVariable = ['', new entity(0, 0, 0, corpseSpritesheet, 0, 0, 'dialogue', 
+      [
+        [['never seen'], ['help...\nme...'], [''], ['']],
+        [['Who said that?'], ['Aaugh...'], [''], ['']],
+        [["*It seems I'm too late"], [''], [''], ['']]
+      ], 1, new inventory([], [], []), {})]
+      talkDepth = 0
+      talkOption = 0
+      mouseWasPressed = true
+      exitPointerLock()
       break
   }
 }
@@ -417,7 +446,7 @@ class pc {
     if (keyIsDown(88)) {//debug log player position
       console.log(player.x, player.y, player.z)
     }
-    if (keyIsDown(ctrlListens.fwKey) && !this.attacking) {//w
+    if (keyIsDown(ctrlListens.fwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//w
       if (this.moveCheck('fw')) {
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
@@ -426,7 +455,7 @@ class pc {
         }
       }
     }
-    if (keyIsDown(ctrlListens.bwKey) && !this.attacking) {//s
+    if (keyIsDown(ctrlListens.bwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//s
       if (this.moveCheck('bw')) {
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
@@ -435,7 +464,7 @@ class pc {
         }
       }
     }
-    if (keyIsDown(ctrlListens.lwKey) && !this.attacking) {//a
+    if (keyIsDown(ctrlListens.lwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//a
       if (this.moveCheck('lw')) {
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
@@ -444,7 +473,7 @@ class pc {
         }
       }
     }
-    if (keyIsDown(ctrlListens.rwKey) && !this.attacking) {//d
+    if (keyIsDown(ctrlListens.rwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//d
       if (this.moveCheck('rw')) {
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
@@ -1134,7 +1163,6 @@ class ai {
         currentCell.objects[this.linkedNtt].angle = this.angle
         currentCell.objects[this.linkedNtt].frame = 0
         currentCell.objects[this.linkedNtt].animation = 'a'
-        console.log(currentCell.objects[this.linkedNtt].frame)
         break;
       case 'a': // attacking
         currentCell.objects[this.linkedNtt].animation = 'a'
@@ -1161,7 +1189,6 @@ class ai {
           this.meleeCheck() //reset attack once complete
         }
         currentCell.objects[this.linkedNtt].frame = this.attackFrame
-        console.log(currentCell.objects[this.linkedNtt].frame)
         break
       case 'd': // dead
         currentCell.objects[this.linkedNtt].animation = 'd'
@@ -1274,7 +1301,7 @@ class statBlock {
 }
 
 class keyGroup {
-  constructor(fwKey, bwKey, lwKey, rwKey, invKey, intKey, statKey, jumpKey, snstvt) {
+  constructor(fwKey, bwKey, lwKey, rwKey, invKey, intKey, statKey, jumpKey, snstvt, dropKey) {
     this.fwKey = fwKey
     this.bwKey = bwKey
     this.lwKey = lwKey
@@ -1284,6 +1311,7 @@ class keyGroup {
     this.statKey = statKey
     this.jumpKey = jumpKey
     this.snstvt = snstvt
+    this.dropKey = dropKey
     this.nullRef = 0
   }
 }
@@ -1498,6 +1526,7 @@ let fistSprite
 let axeSprite
 let daggerSprite
 let spearSprite
+let zombWpn
 //buttons
 let crossImg
 let beginButt
@@ -1573,6 +1602,7 @@ let hotbarSelect
 let selectedWeapon
 let hotbarButts
 let invOffset
+let wasDropHeld = false
 let xpToNextLevel
 let battleQuery
 
@@ -1642,14 +1672,14 @@ function preload() {
 }
 
 function setup() {
-  ctrlListens = new keyGroup(87, 83, 65, 68, 73, 69, 76, 32, 1)
+  ctrlListens = new keyGroup(87, 83, 65, 68, 73, 69, 76, 32, 1, 81)
   skeleLeathDagSpritesheet = new spritesheet(skeleLeathDagSprite, 44, 50)
   skeleDagSpritesheet = new spritesheet(skeleDagSprite, 44, 52)
   skeleSwordSpritesheet = new spritesheet(skeleSwordSprite, 90, 67)
   blankSpritesheet = new spritesheet(blankSprite, 1, 1)
   droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
   potionSpritesheet = new spritesheet(potionSprite, 64, 64)
-  corpseSpritesheet = new spritesheet(corpseSprite, 30, 39)
+  corpseSpritesheet = new spritesheet(corpseSprite, 39, 39)
   zombieBossSpritesheet = new spritesheet(zombieBossSprite, 54, 64)
   npcSpritesheet = new spritesheet(npcSprite, 30, 50)
   punch = new weapon('just your fists', 2, fistSprite, 3, 2, [], punchIcon, 'str', 1, {})
@@ -1658,6 +1688,7 @@ function setup() {
   nmeSword = new weapon('the sword enemies use', 20, swordSprite, 5, 4, [], swordIcon2, 'dex', 1, {})
   spear = new weapon('winged spear', 50, spearSprite, 7, 5, [], spearIcon, 'dex', 1, {})
   axe = new weapon('battleaxe', 18, axeSprite, 8, 5, [], axeIcon, 'str', 1, { swingSound: atkSword })
+  zombWpn = new weapon('U hacking?', 5, fistSprite, 7, 5, [], punchIcon, 'str', 1, {})
   defArmour = new apparel('ragged clothes', 2, teeIcon)
   ironArmour = new apparel('iron armour', 5, teeIcon)
   healthPot = new consumable('health potion', 'heal', 'a bottle of a healing elixir', potionIcon, 25, {})
@@ -1789,18 +1820,17 @@ function setup() {
     new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), { canCollide: false }),
     new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), { canCollide: false }),
     new entity(0, 0, 0, zombieBossSpritesheet, 100, 300, false, [], 6, new inventory([spear], [], []), {}),
-    new entity(100, 0, 450, npcSpritesheet, 75, 175, 'dialogue',
+    new entity(1400, -450, 16700, npcSpritesheet, 75, 175, 'dialogue',
       [
         [['never seen'], ['Higher beings: these words are for you alone'], [''], ['']],
         [['What?'], ['Thank you for playing the demo of Broken Legacy: the mortal tombs'], [''], ['']],
-        [['What?'], [''], [''], ['']]
+        [['What?'], [''], ['finalNpcSelfChange'], ['']]
       ],
       7, new inventory([dagger], [defArmour], []), {}
     )
   ], [
     new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11, {}), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11, {}),
-    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 1, 6, 'i', nmeSword, 75, { musicOverride: bossMusic1, onDeath: 'boss1end' }),
-    new ai(1500, -450, 16900, 0, 15, 50, 7, 'i', dagger, 5, {})
+    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 1, 6, 'i', nmeSword, 75, { musicOverride: bossMusic1, onDeath: 'boss1end' })
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
@@ -1809,7 +1839,8 @@ function setup() {
     new pathNode(8650, -1050, [11, 13], 12), new pathNode(7700, -150, [12, 14], 13), new pathNode(7100, 400, [13, 15], 14),
     new pathNode(6700, 1300, [14, 16], 15), new pathNode(6700, 4000, [15, 17], 16), new pathNode(5200, 6900, [16, 18], 17),
     new pathNode(5800, 9800, [17, 19], 18), new pathNode(5800, 10500, [18, 20], 19), new pathNode(5600, 12400, [19, 21, 22], 20),
-    new pathNode(4800, 13200, [20, 22, 23], 21), new pathNode(4300, 12250, [20, 21], 22), new pathNode(3100, 13200, [21], 23)
+    new pathNode(4800, 13200, [20, 22, 23], 21), new pathNode(4300, 12250, [20, 21], 22), new pathNode(3100, 13200, [21, 24], 23),
+    new pathNode(1900, 13200, [23], 24)
   ], stone, dGrey, defaultMusic)
   cell2 = new cell([
     //walls
@@ -1824,9 +1855,8 @@ function setup() {
     new boundary(250, -1375, 225, -1375, darkPlanks, 100, 0), new boundary(250, -1375, 250, -1400, darkPlanks, 100, 0),
     new boundary(-225, -1625, 225, -1625, darkPlanks, 25, 75), new boundary(-250, -1600, -250, -1400, darkPlanks, 25, 75),
     new boundary(-225, -1375, 225, -1375, darkPlanks, 25, 75), new boundary(250, -1400, 250, -1600, darkPlanks, 25, 75)
-
   ], [
-
+    new triggerWall(-600, -1400, 600, -1400, 175, 0, 'cryForHelp', '')
   ], [
     new floor(1200, 2000, 0, 0, -900, 0, woodPlanks, { sound: footstepsWood }), new floor(500, 250, 0, 100, -1500, 0, darkPlanks, {}),
     new floor(1200, 2000, 0, 250, -900, 0, woodPlanks, {})
@@ -1835,9 +1865,10 @@ function setup() {
     new entity(70, 100, -1420, potionSpritesheet, 64, 64, 'loot', ['delOnEmpty', 'hideOnEmpty'], 1, new inventory([], [], [healthPot]), { canCollide: false }),
     new entity(556, 0, -944, corpseSpritesheet, 88, 100, 'loot', ['', ''], 2, new inventory([defSword], [], [loreBook1]), { canCollide: false })
   ], [
-    new ai(556, 0, -944, 0, 5, 20, 2, 'n', nmeSword, 5, {})
+    new ai(556, 0, -944, 0, 5, 20, 2, 'n', zombWpn, 5, { onDeath: 'secretNmeDie'})
   ], [
-    new pathNode(0, -1000, [1], 0), new pathNode(400, -1300, [0], 1)
+    new pathNode(0, -1000, [1], 0), new pathNode(400, -1300, [0], 1), new pathNode(400, -1800, [1, 3], 2), new pathNode(-400, -1800, [2, 4], 3),
+    new pathNode(-400, -1300, [3, 0], 4)
   ], woodPlanks, brown, defaultMusic)
   cell3 = new cell([
     new boundary(-150, -100, 150, -100, stoneWDoor, 450, 0), new boundary(150, -100, 300, 50, stone, 450, 0),
@@ -2012,13 +2043,16 @@ function draw() {
         player.hotbar[player.weapon].swingSound.play()
       }
       if (player.attacking == true) {
-        player.attackFrame += 1
+        player.attackFrame += 0.5
         if (player.attackFrame == player.hotbar[player.weapon].dF) {
           interactCheckVariable = player.attackCheck()
           if (interactCheckVariable != false) {
-            interactCheckVariable.hp -= player.damageCalc({})
+            if (interactCheckVariable.mode != 'n'){
+              interactCheckVariable.hp -= player.damageCalc({})
+            }
             if (interactCheckVariable.mode == 'i') {
               interactCheckVariable.mode = 'h'
+              currentCell.objects[interactCheckVariable.linkedNtt].interactible = false
             }
           }
         }
@@ -2206,7 +2240,7 @@ function ui() {
   image(player.hotbar[player.weapon].spriteSheet,
     -512, -288,
     1024, 576,
-    320 * player.attackFrame, 0,
+    320 * Math.floor(player.attackFrame), 0,
     320, 180
   )
   rect(0, 250, 170 * player.hp / player.maxHp, 30)
@@ -2267,7 +2301,7 @@ function menuUI() {
 function settingsUI() {
   let expandedKeyNames = [
     'fwKey', 'forwards', 'bwKey', 'backwards', 'lwKey', 'strafe left', 'rwKey', 'strafe right',
-    'jumpKey', 'jump', 'invKey', 'inventory', 'statKey', 'view stats', 'intKey', 'interact'
+    'jumpKey', 'jump', 'invKey', 'inventory', 'statKey', 'view stats', 'intKey', 'interact', 'dropKey', 'drop'
   ]
   let buttons = [
     //back
@@ -2277,6 +2311,7 @@ function settingsUI() {
     new menuButton(-400, -150, 200, 25, 'lwKey', upButton, 64, 64), new menuButton(-400, -125, 200, 25, 'rwKey', upButton, 64, 64),
     new menuButton(-400, -100, 200, 25, 'jumpKey', upButton, 64, 64), new menuButton(-400, -75, 200, 25, 'invKey', upButton, 64, 64),
     new menuButton(-400, -50, 200, 25, 'statKey', upButton, 64, 64), new menuButton(-400, -25, 200, 25, 'intKey', upButton, 64, 64),
+    new menuButton(-400, 0, 200, 25, 'dropKey', upButton, 64, 64), 
     new menuButton(325, -200, 25, 25, 'musicDn', downButton, 64, 64), new menuButton(350, -200, 25, 25, 'musicUp', upButton, 64, 64),
     new menuButton(325, -175, 25, 25, 'sfxDn', downButton, 64, 64), new menuButton(350, -175, 25, 25, 'sfxUp', upButton, 64, 64),
     new menuButton(50, -200, 25, 25, 'snstvtDn', downButton, 64, 64), new menuButton(75, -200, 25, 25, 'snstvtUp', upButton, 64, 64)
@@ -2460,9 +2495,15 @@ function inventoryUI() {
     fill(0)
     text(i.spriteSheet.name, -366, i.collY)
     text('dmg: ' + i.spriteSheet.damage, -400, i.collY + 34)
-    if (i.checkHovered() && !mouseWasPressed && mouseIsPressed && hotbarSelect == false) {
-      selectedWeapon = i.spriteSheet
-      hotbarSelect = true
+    if (i.checkHovered()) {
+      if (keyIsDown(ctrlListens.dropKey)) {
+        droppedInv.weapons.push(player.inventory.weapons[weaponsButtons.indexOf(i) + (invOffset * 5)])
+        player.inventory.weapons.splice(weaponsButtons.indexOf(i) + (invOffset * 5), 1)
+      }
+      else if (!mouseWasPressed && mouseIsPressed && hotbarSelect == false) {
+        selectedWeapon = i.spriteSheet
+        hotbarSelect = true
+      }
     }
   }
   for (let i of apparelButtons) {
@@ -2472,11 +2513,17 @@ function inventoryUI() {
     fill(0)
     text(i.spriteSheet.name, -298 / 3, i.collY)
     text('def: ' + i.spriteSheet.defense, -400 / 3, i.collY + 34)
-    if (i.checkHovered() && !mouseWasPressed && mouseIsPressed && hotbarSelect == false) {
-      player.def = i.spriteSheet.defense
-      player.inventory.apparels.splice(player.inventory.apparels.indexOf(i.spriteSheet), 1)
-      player.inventory.apparels.push(player.armour)
-      player.armour = i.spriteSheet
+    if (i.checkHovered()) {
+      if (keyIsDown(ctrlListens.dropKey)) {
+        droppedInv.apparels.push(player.inventory.apparels[apparelButtons.indexOf(i) + (invOffset * 5)])
+        player.inventory.apparels.splice(apparelButtons.indexOf(i) + (invOffset * 5), 1)
+      }
+      else if (!mouseWasPressed && mouseIsPressed && hotbarSelect == false) {
+        player.def = i.spriteSheet.defense
+        player.inventory.apparels.splice(player.inventory.apparels.indexOf(i.spriteSheet), 1)
+        player.inventory.apparels.push(player.armour)
+        player.armour = i.spriteSheet
+      }
     }
   }
   for (let i of usablesButtons) {
@@ -2486,10 +2533,16 @@ function inventoryUI() {
     fill(0)
     text(i.spriteSheet.name, 502 / 3, i.collY)
     text(i.spriteSheet.desc, 400 / 3, i.collY + 32)
-    if (i.checkHovered() && !mouseWasPressed && mouseIsPressed && hotbarSelect == false) {
-      i.spriteSheet.executeFunc({ data: i.spriteSheet.extraData })
-      if (i.spriteSheet.delOnUse) {
-        player.inventory.usables.splice(usablesButtons.indexOf(i), 1)
+    if (i.checkHovered()) {
+      if (keyIsDown(ctrlListens.dropKey)) {
+        droppedInv.usables.push(player.inventory.usables[usablesButtons.indexOf(i) + (invOffset * 5)])
+        player.inventory.usables.splice(usablesButtons.indexOf(i) + (invOffset * 5), 1)
+      }
+      else if (!mouseWasPressed && mouseIsPressed && hotbarSelect == false) {
+        i.spriteSheet.executeFunc({ data: i.spriteSheet.extraData })
+        if (i.spriteSheet.delOnUse) {
+          player.inventory.usables.splice(usablesButtons.indexOf(i), 1)
+        }
       }
     }
   }
@@ -2506,16 +2559,13 @@ function inventoryUI() {
     i.render()
     i.executeFunc({})
   }
-  if (keyIsDown(81) && player.inventory.weapons.length >= 1) {
-    droppedInv.weapons.push(player.inventory.weapons[0])
-    player.inventory.weapons.shift()
-  }
   exitButton.render()
   exitButton.executeFunc({})
   if (hotbarSelect == true) {
     hotbarUI(selectedWeapon)
   }
   pop()
+  wasDropHeld = keyIsDown(ctrlListens.dropKey)
 }
 
 function lootUI(lootee) {
