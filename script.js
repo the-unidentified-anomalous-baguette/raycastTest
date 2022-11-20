@@ -110,7 +110,7 @@ function universalSwitch(event, { data = null }) {
     case 'exitInv':
       if (gameState == 'inventory') {
         if (droppedInv.weapons.length >= 1 || droppedInv.apparels.length >= 1 || droppedInv.usables.length >= 1) {
-          currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 8, 8, 'loot', ['delOnEmpty', 'hideOnEmpty'], 0, droppedInv, { canCollide: false }))
+          currentCell.objects.push(new entity(player.x, player.currentFloor.y, player.z, droppedSpritesheet, 64, 64, 'loot', ['delOnEmpty', 'hideOnEmpty'], 0, droppedInv, { canCollide: false }))
           currentCell.objects[currentCell.objects.length - 1].ogIndex = currentCell.objects.length - 1
         }
         droppedInv = new inventory([], [], [])
@@ -230,12 +230,12 @@ function universalSwitch(event, { data = null }) {
       talkDepth += data
       break
     case 'snstvtUp':
-      if (ctrlListens.snstvt < 10){
+      if (ctrlListens.snstvt < 10) {
         ctrlListens.snstvt += 1
       }
       break
     case 'snstvtDn':
-      if (ctrlListens.snstvt > 0){
+      if (ctrlListens.snstvt > 0) {
         ctrlListens.snstvt -= 1
       }
       break
@@ -256,12 +256,12 @@ function universalSwitch(event, { data = null }) {
       break
     case 'cryForHelp':
       gameState = 'dialogue'
-      interactCheckVariable = ['', new entity(0, 0, 0, corpseSpritesheet, 0, 0, 'dialogue', 
-      [
-        [['never seen'], ['help...\nme...'], [''], ['']],
-        [['Who said that?'], ['Aaugh...'], [''], ['']],
-        [["*It seems I'm too late"], [''], [''], ['']]
-      ], 1, new inventory([], [], []), {})]
+      interactCheckVariable = ['', new entity(0, 0, 0, corpseSpritesheet, 0, 0, 'dialogue',
+        [
+          [['never seen'], ['help...\nme...'], [''], ['']],
+          [['Who said that?'], ['Aaugh...'], [''], ['']],
+          [["*It seems I'm too late"], [''], [''], ['']]
+        ], 1, new inventory([], [], []), {})]
       talkDepth = 0
       talkOption = 0
       mouseWasPressed = true
@@ -446,7 +446,7 @@ class pc {
     if (keyIsDown(88)) {//debug log player position
       console.log(player.x, player.y, player.z)
     }
-    if (keyIsDown(ctrlListens.fwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//w
+    if (keyIsDown(ctrlListens.fwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//w
       if (this.moveCheck('fw')) {
         this.x += this.speed * sin(this.angleLR)
         this.z -= this.speed * cos(this.angleLR)
@@ -455,7 +455,7 @@ class pc {
         }
       }
     }
-    if (keyIsDown(ctrlListens.bwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//s
+    if (keyIsDown(ctrlListens.bwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//s
       if (this.moveCheck('bw')) {
         this.x -= this.speed * sin(this.angleLR)
         this.z += this.speed * cos(this.angleLR)
@@ -464,7 +464,7 @@ class pc {
         }
       }
     }
-    if (keyIsDown(ctrlListens.lwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//a
+    if (keyIsDown(ctrlListens.lwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//a
       if (this.moveCheck('lw')) {
         this.x -= this.speed * cos(this.angleLR)
         this.z -= this.speed * sin(this.angleLR)
@@ -473,7 +473,7 @@ class pc {
         }
       }
     }
-    if (keyIsDown(ctrlListens.rwKey) && (!this.attacking || this.attackFrame < this.hotbar[this.weapon].dF / 2)) {//d
+    if (keyIsDown(ctrlListens.rwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//d
       if (this.moveCheck('rw')) {
         this.x += this.speed * cos(this.angleLR)
         this.z += this.speed * sin(this.angleLR)
@@ -510,7 +510,7 @@ class pc {
     if (keyIsDown(52)) {
       this.weapon = 3
     }
-    this.angleLR += movedX * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt/10)) * (1 - (2 * invertX))
+    this.angleLR += movedX * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt / 10)) * (1 - (2 * invertX))
     if (this.angleLR > 360) {
       this.angleLR -= 360
     }
@@ -518,7 +518,7 @@ class pc {
       this.angleLR += 360
     }
     if (this.angleUD <= 75 && this.angleUD >= -89) {
-      this.angleUD -= movedY * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt/10)) * (1 - (2 * invertY))
+      this.angleUD -= movedY * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt / 10)) * (1 - (2 * invertY))
       if (this.angleUD > 75) {
         this.angleUD = 75
       }
@@ -1086,7 +1086,7 @@ class ai {
           this.path = []
           this.goal = []
           this.mode = 'm'
-          currentCell.objects[this.  linkedNtt].frame = 0
+          currentCell.objects[this.linkedNtt].frame = 0
           currentCell.objects[this.linkedNtt].animation = 'a'
           return true
         }
@@ -1413,7 +1413,7 @@ function saveGame() {
     let objects = []
     let floors = []
     let grid = []
-    let dialogueBg = Object.assign({}, i.dialogueBg)
+    let dialogueBg = i.dialogueBg
     let fogColour = Object.assign({}, i.fogColour)
     let bgMusic = i.bgMusic
     for (let j of i.walls) {
@@ -1441,7 +1441,7 @@ function saveGame() {
       j.goal = []
     }
     for (let j of i.floors) {
-      floors.push(new floor(j.width1, j.width2, j.x, j.y, j.z, j.rotation, j.texture, { catchZone: j.catchZone }))
+      floors.push(new floor(j.width1, j.width2, j.x, j.y, j.z, j.rotation, j.texture, { catchZone: j.catchZone, sound: j.sound}))
     }
     floors = Object.assign({}, floors)
     floors = Object.values(floors)
@@ -1677,7 +1677,7 @@ function setup() {
   skeleDagSpritesheet = new spritesheet(skeleDagSprite, 44, 52)
   skeleSwordSpritesheet = new spritesheet(skeleSwordSprite, 90, 67)
   blankSpritesheet = new spritesheet(blankSprite, 1, 1)
-  droppedSpritesheet = new spritesheet(droppedSprite, 8, 8)
+  droppedSpritesheet = new spritesheet(droppedSprite, 32, 32)
   potionSpritesheet = new spritesheet(potionSprite, 64, 64)
   corpseSpritesheet = new spritesheet(corpseSprite, 39, 39)
   zombieBossSpritesheet = new spritesheet(zombieBossSprite, 54, 64)
@@ -1779,8 +1779,8 @@ function setup() {
     //ceiling edges there
     new boundary(3200, 13300, 3200, 13000, wideStone, 50, -200)
   ], [
-    // new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2]),
-    // new triggerWall(5200, 11800, 5800, 11800, 175, -550, 'triggerCombat', [3])
+    new triggerWall(6000, 5800, 5500, 5800, 175, -650, 'triggerCombat', [0, 1, 2]),
+    new triggerWall(5200, 11800, 5800, 11800, 175, -550, 'triggerCombat', [3])
   ], [
     //beginning room
     new floor(5000, 4000, 2500, 0, 2000, 0, largeGravel, {}), new floor(5000, 4000, 2500, 2000, 2000, 180, largeStone, {}),
@@ -1811,7 +1811,7 @@ function setup() {
     new floor(5000, 3000, 5700, -200, 12400, 0, largeStone, {}),
     //post boss room floors
     new floor(1600, 500, 2400, -500, 13150, 0, gravelled, {}), new floor(1000, 4000, 1500, -450, 15000, 0, woodPlanks, { sound: footstepsWood }),
-    new floor(1000, 4000, 1500, -150, 15000, 0, largeStone, {})
+    new floor(3400, 4000, 1500, -150, 15000, 0, largeStone, {})
   ], [
     new entity(10490, -400, 538, blankSpritesheet, 140, 200, 'loadZone', [1, 0, 0, 0, 0], 0, new inventory([], [], []), { canCollide: false }),
     new entity(6000, -650, 7600, skeleLeathDagSpritesheet, 75, 175, false, [], 1, new inventory([dagger], [defArmour], [healthPot]), {}),
@@ -1830,7 +1830,7 @@ function setup() {
     )
   ], [
     new ai(6000, -650, 7600, 0, 15, 100, 1, 'i', nmeSword, 11, {}), new ai(4500, -650, 7100, 0, 15, 100, 2, 'i', nmeSword, 11, {}),
-    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 1, 6, 'i', nmeSword, 75, { musicOverride: bossMusic1, onDeath: 'boss1end' })
+    new ai(5500, -650, 9200, 0, 15, 100, 3, 'i', nmeSword, 11, {}), new ai(3900, -550, 12250, 0, 20, 200, 6, 'i', spear, 75, { musicOverride: bossMusic1, onDeath: 'boss1end' })
   ], [
     new pathNode(2800, 1100, [1], 0), new pathNode(6000, 1100, [0, 2], 1), new pathNode(6750, 1450, [1, 3], 2),
     new pathNode(6650, 1750, [2, 4], 3), new pathNode(6800, 2000, [3, 5], 4), new pathNode(7200, 2200, [4, 6], 5),
@@ -1865,7 +1865,7 @@ function setup() {
     new entity(70, 100, -1420, potionSpritesheet, 64, 64, 'loot', ['delOnEmpty', 'hideOnEmpty'], 1, new inventory([], [], [healthPot]), { canCollide: false }),
     new entity(556, 0, -944, corpseSpritesheet, 88, 100, 'loot', ['', ''], 2, new inventory([defSword], [], [loreBook1]), { canCollide: false })
   ], [
-    new ai(556, 0, -944, 0, 5, 20, 2, 'n', zombWpn, 5, { onDeath: 'secretNmeDie'})
+    new ai(556, 0, -944, 0, 5, 20, 2, 'n', zombWpn, 5, { onDeath: 'secretNmeDie' })
   ], [
     new pathNode(0, -1000, [1], 0), new pathNode(400, -1300, [0], 1), new pathNode(400, -1800, [1, 3], 2), new pathNode(-400, -1800, [2, 4], 3),
     new pathNode(-400, -1300, [3, 0], 4)
@@ -1886,7 +1886,7 @@ function setup() {
         [['never seen'], ['Hello'], [''], ['']],
         [['Hello', 'Hello?'], ["Oh good, you're human, I was worried I would be trapped forever", "No need to sound like that, I'm not a monster"], ['', ''], ['', '']],
         [['What are you doing here?'], ["I don't remember, but I'm too afraid to leave"], ['', ''], ['', '']],
-        [["Do you need help?", "Good luck with that"], ["Yes! Please kill those monsters and let me be free", 'theoretically never seen'], ['', 'talkSkip'], ['', 1]],
+        [["Do you need help?", "Good luck with that"], ["Yes! Take this, it might help you", 'theoretically never seen'], ['giveWpn', 'talkSkip'], [axe, 1]],
         [['Of course', 'Goodbye'], ['', ''], ['', ''], ['', '']]
         //player options, shown responses, triggered event, event data
       ],
@@ -1906,9 +1906,6 @@ function setup() {
   currentCell = world[0]
   currentCellNo = 0
   player = new pc(1375, 1, 2750, 175, 225, -45, 8, currentCell.floors[0], 100, 0, defArmour, {})
-  player.y = -650
-  player.x = 7600
-  player.z = 5666
   cam.centerX += player.x
   cam.eyeX += player.x
   cam.centerY -= 175
@@ -1916,7 +1913,6 @@ function setup() {
   cam.centerZ += player.z
   cam.eyeZ += player.z
   xpToNextLevel = 100
-  player.hotbar[0] = axe
   uiCam.ortho()
   battleQuery = false
   textFont(font)
@@ -1951,6 +1947,7 @@ function draw() {
         }
         for (let i of currentCell.AIs) {
           if (i.music != false && (i.mode == 'h' || i.mode == 'm' || i.mode == 'a')) {
+            battleMusic1.pause()
             if (!i.music.isPlaying()) {
               i.music.play()
               break
@@ -2047,7 +2044,7 @@ function draw() {
         if (player.attackFrame == player.hotbar[player.weapon].dF) {
           interactCheckVariable = player.attackCheck()
           if (interactCheckVariable != false) {
-            if (interactCheckVariable.mode != 'n'){
+            if (interactCheckVariable.mode != 'n') {
               interactCheckVariable.hp -= player.damageCalc({})
             }
             if (interactCheckVariable.mode == 'i') {
@@ -2311,7 +2308,7 @@ function settingsUI() {
     new menuButton(-400, -150, 200, 25, 'lwKey', upButton, 64, 64), new menuButton(-400, -125, 200, 25, 'rwKey', upButton, 64, 64),
     new menuButton(-400, -100, 200, 25, 'jumpKey', upButton, 64, 64), new menuButton(-400, -75, 200, 25, 'invKey', upButton, 64, 64),
     new menuButton(-400, -50, 200, 25, 'statKey', upButton, 64, 64), new menuButton(-400, -25, 200, 25, 'intKey', upButton, 64, 64),
-    new menuButton(-400, 0, 200, 25, 'dropKey', upButton, 64, 64), 
+    new menuButton(-400, 0, 200, 25, 'dropKey', upButton, 64, 64),
     new menuButton(325, -200, 25, 25, 'musicDn', downButton, 64, 64), new menuButton(350, -200, 25, 25, 'musicUp', upButton, 64, 64),
     new menuButton(325, -175, 25, 25, 'sfxDn', downButton, 64, 64), new menuButton(350, -175, 25, 25, 'sfxUp', upButton, 64, 64),
     new menuButton(50, -200, 25, 25, 'snstvtDn', downButton, 64, 64), new menuButton(75, -200, 25, 25, 'snstvtUp', upButton, 64, 64)
@@ -2401,6 +2398,7 @@ function dialogueUI(entity) {
   )
   textSize(25)
   fill(0)
+  textAlign(CENTER, CENTER)
   text(entity.useData[talkDepth][1][talkOption], -256, 100, 400, 200)
   for (let i = 0; i < entity.useData[talkDepth + 1][0].length; i++) {
     text(entity.useData[talkDepth + 1][0][i], 256, 100 * (i - 2) + 10, 400, 400)
@@ -2494,7 +2492,7 @@ function inventoryUI() {
     image(i.spriteSheet.icon, -400, i.collY, 32, 32, 0, 0, 64, 64)
     fill(0)
     text(i.spriteSheet.name, -366, i.collY)
-    text('dmg: ' + i.spriteSheet.damage, -400, i.collY + 34)
+    text('dmg: ' + i.spriteSheet.damage + ', scaling: ' + i.spriteSheet.scaleStat + ' ' + i.spriteSheet.scaleAbility, -400, i.collY + 34)
     if (i.checkHovered()) {
       if (keyIsDown(ctrlListens.dropKey)) {
         droppedInv.weapons.push(player.inventory.weapons[weaponsButtons.indexOf(i) + (invOffset * 5)])
