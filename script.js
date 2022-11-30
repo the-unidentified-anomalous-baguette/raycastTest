@@ -6,8 +6,6 @@ let purple = [150, 10, 200]
 let dGrey = [30, 30, 30]
 let brown = [100, 50, 0]
 
-//extend map: this is the real main priority
-
 function universalSwitch(event, { data = null }) {
   switch (event) {
     case 'beginGame':
