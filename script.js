@@ -1,3 +1,4 @@
+'use strict';
 let red = [200, 10, 10]
 let green = [10, 200, 10]
 let grey = [150, 150, 150]
