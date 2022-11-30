@@ -218,10 +218,10 @@ function universalSwitch(event, { data = null }) {
       }
       break
     case 'boss1end':
-      cell1.walls[95].height = 0
-      cell1.walls[95].midY = 0
-      cell1.walls[100].height = 50
-      cell1.walls[100].midY = 525
+      world[0].walls[95].height = 0
+      world[0].walls[95].midY = 0
+      world[0].walls[100].height = 50
+      world[0].walls[100].midY = 525
       world[1].AIs[0].mode = 'h'
       world[1].trigWalls = []
       break
@@ -314,7 +314,7 @@ class menuButton {
 }
 
 class pc {
-  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor, hp, weapon, armour, { xp = 0, level = 0 }) {
+  constructor(x, y, z, height, angleLR, angleUD, speed, currentFloor, hp, weapon, armour, { xp = 0, level = 0, maxHp = 100}) {
     this.x = x
     this.y = y
     this.z = z
@@ -325,7 +325,7 @@ class pc {
     this.eyeLevel = y + height
     this.currentFloor = currentFloor
     this.hp = hp
-    this.maxHp = hp
+    this.maxHp = maxHp
     this.def = 0
     this.weapon = weapon
     this.armour = armour
@@ -371,6 +371,8 @@ class pc {
   }
 
   moveCheck(dir) {
+    let fallSpeeds = [0.2, 1]
+    let airBool = Number(this.y == this.currentFloor.y)
     let x3 = this.x
     let z3 = this.z
     let x4
@@ -380,20 +382,20 @@ class pc {
     let u
     //projects player forward, changes direction depending on where the player is trying to go
     if (dir == 'fw') {
-      x4 = this.x + sin(this.angleLR) * this.speed
-      z4 = this.z - cos(this.angleLR) * this.speed
+      x4 = this.x + sin(this.angleLR) * this.speed * fallSpeeds[airBool]
+      z4 = this.z - cos(this.angleLR) * this.speed * fallSpeeds[airBool]
     }
     else if (dir == 'bw') {
-      x4 = this.x - sin(this.angleLR) * this.speed
-      z4 = this.z + cos(this.angleLR) * this.speed
+      x4 = this.x - sin(this.angleLR) * this.speed * fallSpeeds[airBool]
+      z4 = this.z + cos(this.angleLR) * this.speed * fallSpeeds[airBool]
     }
     else if (dir == 'lw') {
-      x4 = this.x - cos(this.angleLR) * this.speed
-      z4 = this.z - sin(this.angleLR) * this.speed
+      x4 = this.x - cos(this.angleLR) * this.speed * fallSpeeds[airBool]
+      z4 = this.z - sin(this.angleLR) * this.speed * fallSpeeds[airBool]
     }
     else {
-      x4 = this.x + cos(this.angleLR) * this.speed
-      z4 = this.z + sin(this.angleLR) * this.speed
+      x4 = this.x + cos(this.angleLR) * this.speed * fallSpeeds[airBool]
+      z4 = this.z + sin(this.angleLR) * this.speed * fallSpeeds[airBool]
     }
 
     for (let i of currentCell.walls) {
@@ -442,59 +444,45 @@ class pc {
   }
 
   controls() {
+    let fallSpeeds = [0.2, 1]
+    let airBool = Number(this.y == this.currentFloor.y) //false when in air
     if (keyIsDown(88)) {//debug log player position
       console.log(player.x, player.y, player.z)
     }
     if (keyIsDown(ctrlListens.fwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//w
       if (this.moveCheck('fw')) {
-        this.x += this.speed * sin(this.angleLR)
-        this.z -= this.speed * cos(this.angleLR)
-        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y) {
+        this.x += this.speed * sin(this.angleLR) * fallSpeeds[airBool]
+        this.z -= this.speed * cos(this.angleLR) * fallSpeeds[airBool]
+        if (!this.currentFloor.sound.isPlaying() && airBool) {
           this.currentFloor.sound.play()
         }
       }
     }
     if (keyIsDown(ctrlListens.bwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//s
       if (this.moveCheck('bw')) {
-        this.x -= this.speed * sin(this.angleLR)
-        this.z += this.speed * cos(this.angleLR)
-        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y) {
+        this.x -= this.speed * sin(this.angleLR) * fallSpeeds[airBool]
+        this.z += this.speed * cos(this.angleLR) * fallSpeeds[airBool]
+        if (!this.currentFloor.sound.isPlaying() && airBool) {
           this.currentFloor.sound.play()
         }
       }
     }
     if (keyIsDown(ctrlListens.lwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//a
       if (this.moveCheck('lw')) {
-        this.x -= this.speed * cos(this.angleLR)
-        this.z -= this.speed * sin(this.angleLR)
-        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y) {
+        this.x -= this.speed * cos(this.angleLR) * fallSpeeds[airBool]
+        this.z -= this.speed * sin(this.angleLR) * fallSpeeds[airBool]
+        if (!this.currentFloor.sound.isPlaying() && airBool) {
           this.currentFloor.sound.play()
         }
       }
     }
     if (keyIsDown(ctrlListens.rwKey) && (!this.attacking || this.attackFrame <= this.hotbar[this.weapon].dF / 2)) {//d
       if (this.moveCheck('rw')) {
-        this.x += this.speed * cos(this.angleLR)
-        this.z += this.speed * sin(this.angleLR)
-        if (!this.currentFloor.sound.isPlaying() && this.y == this.currentFloor.y) {
+        this.x += this.speed * cos(this.angleLR) * fallSpeeds[airBool]
+        this.z += this.speed * sin(this.angleLR) * fallSpeeds[airBool]
+        if (!this.currentFloor.sound.isPlaying() && airBool) {
           this.currentFloor.sound.play()
         }
-      }
-    }
-    if (keyIsDown(37)) {//left
-      this.angleLR -= 3 * (30 / frameRate())
-    }
-    if (keyIsDown(38)) {//up
-      if (this.angleUD < 75) {
-        this.angleUD += 1 * (30 / frameRate())
-      }
-    }
-    if (keyIsDown(39)) {//right key
-      this.angleLR += 3 * (30 / frameRate())// rotate right
-    }
-    if (keyIsDown(40)) {//down key
-      if (this.angleUD > -45) { // limit angle
-        this.angleUD -= 1 * (30 / frameRate())
       }
     }
     if (keyIsDown(49)) {//numbers for hotbar
@@ -509,7 +497,7 @@ class pc {
     if (keyIsDown(52)) {
       this.weapon = 3
     }
-    this.angleLR += movedX * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt / 10)) * (1 - (2 * invertX))
+    this.angleLR += movedX * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt / 10)) * (1 - (2 * invertX)) * 0.5
     if (this.angleLR > 360) {
       this.angleLR -= 360
     }
@@ -517,7 +505,7 @@ class pc {
       this.angleLR += 360
     }
     if (this.angleUD <= 75 && this.angleUD >= -89) {
-      this.angleUD -= movedY * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt / 10)) * (1 - (2 * invertY))
+      this.angleUD -= movedY * (30 / frameRate()) * (0.1 + (ctrlListens.snstvt / 10)) * (1 - (2 * invertY)) * 0.5
       if (this.angleUD > 75) {
         this.angleUD = 75
       }
@@ -538,7 +526,7 @@ class pc {
     cam.centerX = cam.eyeX + sin(this.angleLR)
     cam.centerY = cam.eyeY - tan(this.angleUD)
     cam.centerZ = cam.eyeZ - cos(this.angleLR)
-    if (keyIsDown(ctrlListens.jumpKey) && jumpHeight == 0 && this.y == this.currentFloor.y) {//space
+    if (keyIsDown(ctrlListens.jumpKey) && jumpHeight == 0 && airBool) {//space
       jumping = true
     }
     this.floorCheck()
@@ -1379,7 +1367,7 @@ function intersectCheck(l11, l12, l21, l22) {
 
 function saveGame() {
   savedWorld = [
-    new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, player.armour, { xp: player.xp, level: player.level }),
+    new pc(player.x, player.y, player.z, player.height, player.angleLR, player.angleUD, player.speed, player.currentFloor, player.hp, player.weapon, player.armour, { xp: player.xp, level: player.level, maxHp: player.maxHp}),
     [], currentCellNo
   ]
   let inv
@@ -1397,7 +1385,7 @@ function saveGame() {
   apparels = Object.assign({}, apparels)
   apparels = Object.values(apparels)
   for (let i of player.inventory.usables) {
-    usables.push(new consumable(i.name, i.func, i.desc, i.icon, i.exrtaData))
+    usables.push(new consumable(i.name, i.func, i.desc, i.icon, i.extraData, {delOnUse: i.delOnUse}))
   }
   usables = Object.assign({}, usables)
   usables = Object.values(usables)
@@ -1508,7 +1496,7 @@ let npcSprite
 let npcSpritesheet
 //walls and floors
 let stone
-let widestone
+let wideStone
 let largeStone
 let gravelled
 let wideGravel
@@ -1542,6 +1530,7 @@ let potionIcon
 let bookIcon
 let daggerIcon
 let spearIcon
+let axeIcon
 //fixed use images
 let menuBg
 let settingsBg
@@ -1583,7 +1572,7 @@ let currentCellNo
 let punch
 let defSword
 let nmeSword
-let battleAxe
+let axe
 let dagger
 let spear
 //armour
@@ -1692,7 +1681,7 @@ function setup() {
   ironArmour = new apparel('iron armour', 5, teeIcon)
   healthPot = new consumable('health potion', 'heal', 'a bottle of a healing elixir', potionIcon, 25, {})
   loreBook1 = new consumable('old journal', 'loreTrigger', 'a diary found in a cave', bookIcon, ["Hello journal, \n I don't know if anyone will ever see this, but I wanted to say goodbye. \n Somehow the mine has been overrun with monsters, soulless monsters from beyond the grave, whom I fear I am soon to join. \n I found this room to hide in, but I doubt it will be of any use as a hiding place now. Please, if you are reading this, grant me a kind death.", '[the rest is unreadable]'], { delOnUse: false })
-  allMusic = [defaultMusic, battleMusic1]
+  allMusic = [defaultMusic, battleMusic1, bossMusic1]
   allSfx = [footstepsGravel, footstepsWood, atkDag, atkGen, atkHit, atkSword]
   canvas = createCanvas(1024, 576, WEBGL);
   canvas.parent('container')
@@ -1993,13 +1982,13 @@ function draw() {
           }
         }
       }
-      currentCell.objects = currentCell.objects.sort(entitySort)
+      currentCell.objects.sort(entitySort)
       for (let i of currentCell.objects) {
         if (dist(i.x, i.z, player.x, player.z) <= 2400) {
           i.render()
         }
       }
-      currentCell.objects = currentCell.objects.sort(entityUnsort)
+      currentCell.objects.sort(entityUnsort)
       for (let i of currentCell.objects) {
         if (i.interactible == 'loot' && i.useData[0] == 'delOnEmpty' &&
           i.inventory.weapons.length == 0 && i.inventory.apparels.length == 0 && i.inventory.usables.length == 0) {
