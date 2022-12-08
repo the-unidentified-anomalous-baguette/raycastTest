@@ -1807,7 +1807,7 @@ function setup() {
     new entity(6000, -650, 7600, skeleDagSpritesheet, 75, 175, false, [], 3, new inventory([defSword], [ironArmour], []), {}),
     new entity(3970, 0, 80, corpseSpritesheet, 88, 100, 'loot', ['', ''], 4, new inventory([dagger], [], []), { canCollide: false }),
     new entity(7650, -600, 5750, blankSpritesheet, 200, 285, 'loadZone', [2, 0, 0, 0, 180], 5, new inventory([], [], []), { canCollide: false }),
-    new entity(0, 0, 0, zombieBossSpritesheet, 100, 300, false, [], 6, new inventory([spear], [], []), {}),
+    new entity(0, 0, 0, zombieBossSpritesheet, 100, 250, false, [], 6, new inventory([spear], [], []), {}),
     new entity(1400, -450, 16700, npcSpritesheet, 75, 175, 'dialogue',
       [
         [['never seen'], ['Higher beings: these words are for you alone'], [''], ['']],
